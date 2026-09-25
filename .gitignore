@@ -1,0 +1,144 @@
+# ==============================================================================
+# DefenceIQ - Git Ignore Configuration
+# Comprehensive rules for Python Agent, Android Companion App & Storage Vault
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Security, Tokens & Sensitive Keys
+# ------------------------------------------------------------------------------
+pairing_token.key
+*.key
+*.pem
+*.keystore
+*.jks
+.env
+.env.*
+!.env.example
+
+# ------------------------------------------------------------------------------
+# Databases, Quarantine Vault & Security Telemetry Caches
+# ------------------------------------------------------------------------------
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+defenceiq.db
+quarantine_vault/
+*.qf
+
+# ------------------------------------------------------------------------------
+# Android & Gradle Build Artifacts
+# ------------------------------------------------------------------------------
+.gradle/
+**/android-app/.gradle/
+**/android-app/build/
+**/android-app/app/build/
+**/build/
+android-app/local.properties
+local.properties
+.cxx/
+
+# Android Packaging & Binaries
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+DefenceIQ-Companion.apk
+
+# ------------------------------------------------------------------------------
+# Release Archives & Large Binary Distribution Packages
+# ------------------------------------------------------------------------------
+DefenceIQ-Shareable-Package.zip
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# ------------------------------------------------------------------------------
+# Python Bytecode, Caches & Testing
+# ------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Testing & Coverage
+.pytest_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+htmlcov/
+
+# Virtual Environments
+venv/
+venv*/
+env/
+env*/
+.venv/
+.venv*/
+ENV/
+env.bak/
+venv.bak/
+
+# ------------------------------------------------------------------------------
+# IDE, Editors & OS Generated Files
+# ------------------------------------------------------------------------------
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+*~
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# ------------------------------------------------------------------------------
+# Logs & Temporary Scratch Files
+# ------------------------------------------------------------------------------
+*.log
+logs/
+scratch/
+tmp/
+temp/

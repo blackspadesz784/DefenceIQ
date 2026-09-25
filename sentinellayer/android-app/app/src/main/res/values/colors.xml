@@ -1,0 +1,13 @@
+<resources>
+    <color name="primary">#00E676</color>
+    <color name="primary_dark">#00B0FF</color>
+    <color name="background_dark">#0D1117</color>
+    <color name="surface_dark">#161B22</color>
+    <color name="surface_variant_dark">#21262D</color>
+    <color name="text_primary">#F0F6FC</color>
+    <color name="text_secondary">#8B949E</color>
+    <color name="band_green">#00E676</color>
+    <color name="band_yellow">#FFD600</color>
+    <color name="band_orange">#FF9100</color>
+    <color name="band_red">#FF1744</color>
+</resources>

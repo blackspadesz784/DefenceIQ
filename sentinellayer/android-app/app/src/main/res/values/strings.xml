@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">DefenceIQ</string>
+    <string name="connecting">Connecting to DefenceIQ Laptop Agent…</string>
+    <string name="connected">Connected</string>
+    <string name="disconnected">Offline</string>
+    <string name="pairing_title">Pair with Laptop Agent</string>
+    <string name="enter_laptop_ip">Laptop LAN IP (e.g. 192.168.1.100)</string>
+    <string name="enter_pairing_token">8-Character Pairing Token</string>
+    <string name="pair_button">Pair Device</string>
+    <string name="status_title">Endpoint Protection</string>
+    <string name="protection_level">Protection Level</string>
+    <string name="alerts_title">Real-Time Threat Alerts</string>
+    <string name="rollback_action">Undo Containment (Rollback)</string>
+    <string name="quarantine_title">Quarantine Vault</string>
+</resources>

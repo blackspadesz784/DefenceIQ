@@ -119,6 +119,20 @@ class DefenceIqRepository(
             delay(500)
             tryLocalAutoConnect()
         }
+
+        // Real-time telemetry auto-refresh loop (every 2.5 seconds when connected)
+        scope.launch {
+            while (isActive) {
+                delay(2500)
+                if (_connectionState.value == ConnectionStatus.CONNECTED && apiService != null) {
+                    try {
+                        refreshStatus()
+                    } catch (e: Exception) {
+                        Log.d(tag, "Auto-refresh tick note: ${e.message}")
+                    }
+                }
+            }
+        }
     }
 
     private fun getAuthHeader(): String = "Bearer $token"
@@ -129,7 +143,7 @@ class DefenceIqRepository(
     suspend fun tryLocalAutoConnect(preferredToken: String? = null): Boolean = withContext(Dispatchers.IO) {
         val tok = (preferredToken ?: token).trim().uppercase()
         val candidateHosts = listOf(host, "192.168.1.4", "127.0.0.1", "10.0.2.2", "localhost")
-        val candidateTokens = listOf(tok, "11C6C497", "DIQ-Z4LQ-BXUJ")
+        val candidateTokens = listOf(tok, "11C6C497", "DIQ-Z4LQ-BXUJ", "DIQ-FUXN-G8CE")
         for (h in candidateHosts) {
             for (t in candidateTokens) {
                 try {

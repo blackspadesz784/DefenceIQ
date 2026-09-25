@@ -14,7 +14,92 @@ data class AgentStatusResponse(
     @SerializedName("monitored_pids_count") val monitoredPidsCount: Int,
     @SerializedName("active_sockets_count") val activeSocketsCount: Int,
     @SerializedName("stats") val stats: SystemStats,
-    @SerializedName("engines") val engines: Map<String, String>
+    @SerializedName("engines") val engines: Map<String, String>,
+    @SerializedName("system_metrics") val systemMetrics: SystemMetrics? = null,
+    @SerializedName("active_window") val activeWindow: ActiveWindowGlance? = null,
+    @SerializedName("online_status") val onlineStatus: String? = "ONLINE"
+)
+
+data class SystemMetrics(
+    @SerializedName("cpu_percent") val cpuPercent: Double = 0.0,
+    @SerializedName("cpu_cores_physical") val cpuCoresPhysical: Int = 4,
+    @SerializedName("cpu_cores_logical") val cpuCoresLogical: Int = 8,
+    @SerializedName("cpu_freq_mhz") val cpuFreqMhz: Double = 0.0,
+    @SerializedName("cpu_temp") val cpuTemp: String? = null,
+    @SerializedName("ram") val ram: RamMetrics = RamMetrics(),
+    @SerializedName("disk") val disk: DiskMetrics = DiskMetrics(),
+    @SerializedName("battery") val battery: BatteryMetrics = BatteryMetrics(),
+    @SerializedName("gpu") val gpu: GpuMetrics = GpuMetrics(),
+    @SerializedName("network") val network: NetworkMetrics = NetworkMetrics(),
+    @SerializedName("system_info") val systemInfo: SystemInfoMetrics = SystemInfoMetrics(),
+    @SerializedName("top_processes") val topProcesses: List<ProcessMetric> = emptyList()
+)
+
+data class RamMetrics(
+    @SerializedName("percent") val percent: Double = 0.0,
+    @SerializedName("used_gb") val usedGb: Double = 0.0,
+    @SerializedName("total_gb") val totalGb: Double = 0.0,
+    @SerializedName("available_gb") val availableGb: Double = 0.0
+)
+
+data class DiskMetrics(
+    @SerializedName("percent") val percent: Double = 0.0,
+    @SerializedName("used_gb") val usedGb: Double = 0.0,
+    @SerializedName("free_gb") val freeGb: Double = 0.0,
+    @SerializedName("total_gb") val totalGb: Double = 0.0,
+    @SerializedName("read_speed_kbps") val readSpeedKbps: Double = 0.0,
+    @SerializedName("write_speed_kbps") val writeSpeedKbps: Double = 0.0
+)
+
+data class BatteryMetrics(
+    @SerializedName("percent") val percent: Double? = 100.0,
+    @SerializedName("plugged") val plugged: Boolean = true,
+    @SerializedName("status") val status: String = "Plugged In ⚡",
+    @SerializedName("health") val health: String = "Good",
+    @SerializedName("time_left") val timeLeft: String = "AC Power"
+)
+
+data class GpuMetrics(
+    @SerializedName("name") val name: String = "Integrated GPU",
+    @SerializedName("vram_mb") val vramMb: Double = 0.0,
+    @SerializedName("status") val status: String = "OK",
+    @SerializedName("usage_percent") val usagePercent: Double = 0.0
+)
+
+data class NetworkMetrics(
+    @SerializedName("status") val status: String = "Online",
+    @SerializedName("internet_connected") val internetConnected: Boolean = true,
+    @SerializedName("download_speed_kbps") val downloadSpeedKbps: Double = 0.0,
+    @SerializedName("upload_speed_kbps") val uploadSpeedKbps: Double = 0.0,
+    @SerializedName("bytes_sent_mb") val bytesSentMb: Double = 0.0,
+    @SerializedName("bytes_recv_mb") val bytesRecvMb: Double = 0.0
+)
+
+data class SystemInfoMetrics(
+    @SerializedName("os_name") val osName: String = "Windows",
+    @SerializedName("build") val build: String = "",
+    @SerializedName("processor") val processor: String = "",
+    @SerializedName("architecture") val architecture: String = "",
+    @SerializedName("device_name") val deviceName: String = "",
+    @SerializedName("uptime") val uptime: String = ""
+)
+
+data class ProcessMetric(
+    @SerializedName("pid") val pid: Int = 0,
+    @SerializedName("name") val name: String = "",
+    @SerializedName("cpu_percent") val cpuPercent: Double = 0.0,
+    @SerializedName("memory_mb") val memoryMb: Double = 0.0,
+    @SerializedName("status") val status: String = "Running"
+)
+
+data class ActiveWindowGlance(
+    @SerializedName("app_name") val appName: String? = null,
+    @SerializedName("process_name") val processName: String? = null,
+    @SerializedName("window_title") val windowTitle: String? = null,
+    @SerializedName("tab_title") val tabTitle: String? = null,
+    @SerializedName("url_domain") val urlDomain: String? = null,
+    @SerializedName("category") val category: String? = null,
+    @SerializedName("duration_seconds") val durationSeconds: Int = 0
 )
 
 data class SystemStats(

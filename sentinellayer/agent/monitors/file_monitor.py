@@ -88,6 +88,7 @@ class FileEvent:
     entropy: Optional[float] = None
     is_executable: bool = False
     is_sensitive_location: bool = False
+    responsible_process: Optional[str] = None
     signals: List[str] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -156,21 +157,21 @@ class DefenceIQFileSystemEventHandler(FileSystemEventHandler):
         self.monitor = monitor
 
     def on_created(self, event: FileSystemEvent):
-        if not event.is_directory:
-            self.monitor.process_file_change("FILE_CREATED", event.src_path)
+        ev_type = "FOLDER_CREATED" if event.is_directory else "FILE_CREATED"
+        self.monitor.process_file_change(ev_type, event.src_path, is_directory=event.is_directory)
 
     def on_modified(self, event: FileSystemEvent):
         if not event.is_directory:
-            self.monitor.process_file_change("FILE_MODIFIED", event.src_path)
+            self.monitor.process_file_change("FILE_MODIFIED", event.src_path, is_directory=False)
 
     def on_deleted(self, event: FileSystemEvent):
-        if not event.is_directory:
-            self.monitor.process_file_change("FILE_DELETED", event.src_path)
+        ev_type = "FOLDER_DELETED" if event.is_directory else "FILE_DELETED"
+        self.monitor.process_file_change(ev_type, event.src_path, is_directory=event.is_directory)
 
     def on_moved(self, event: FileSystemEvent):
-        if not event.is_directory:
-            dest_path = getattr(event, "dest_path", event.src_path)
-            self.monitor.process_file_change("FILE_MOVED", dest_path, src_path=event.src_path)
+        dest_path = getattr(event, "dest_path", event.src_path)
+        ev_type = "FOLDER_MOVED" if event.is_directory else "FILE_MOVED"
+        self.monitor.process_file_change(ev_type, dest_path, src_path=event.src_path, is_directory=event.is_directory)
 
 
 # ============================================================================
@@ -190,6 +191,7 @@ class FileMonitor:
         static_analyzer: Optional[Any] = None,
         yara_engine: Optional[Any] = None,
         reputation_engine: Optional[Any] = None,
+        window_monitor: Optional[Any] = None,
     ):
         self.event_bus = event_bus
         self.config = config or default_settings.file_monitor
@@ -197,6 +199,7 @@ class FileMonitor:
         self.static_analyzer = static_analyzer
         self.yara_engine = yara_engine
         self.reputation_engine = reputation_engine
+        self.window_monitor = window_monitor
         self.callbacks: List[Callable[[FileEvent], None]] = []
         self._observer: Optional[Observer] = None
         self._running = False
@@ -205,6 +208,8 @@ class FileMonitor:
             window_seconds=self.config.window_seconds,
             entropy_threshold=self.config.entropy_threshold,
         )
+        self._recent_activities: List[Dict[str, Any]] = []
+        self._recent_lock = threading.Lock()
 
         # Precompute lowercased sets for fast matching
         self._exec_extensions = {ext.lower() for ext in self.config.executable_extensions}
@@ -243,9 +248,10 @@ class FileMonitor:
                 logger.error(f"Error in FileMonitor callback: {e}")
 
     def process_file_change(
-        self, event_type: str, file_path: str, src_path: Optional[str] = None
+        self, event_type: str, file_path: str, src_path: Optional[str] = None, is_directory: bool = False
     ) -> Optional[FileEvent]:
         """Analyzes a file change event, calculates metrics/signals, and emits a FileEvent."""
+        file_name = os.path.basename(file_path)
         # Ignore agent's internal database files, locks, git objects, and development caches
         norm_fp = file_path.replace("\\", "/").lower()
         if (
@@ -260,14 +266,14 @@ class FileMonitor:
             return None
 
         _, ext = os.path.splitext(file_name)
-        ext_lower = ext.lower()
+        ext_lower = ext.lower() if not is_directory else "folder"
 
-        is_exec = ext_lower in self._exec_extensions
+        is_exec = ext_lower in self._exec_extensions and not is_directory
         is_sensitive = self.is_sensitive_path(file_path)
 
         file_size = 0
         entropy = None
-        if event_type != "FILE_DELETED":
+        if not is_directory and "DELETED" not in event_type:
             try:
                 if os.path.isfile(file_path):
                     file_size = os.path.getsize(file_path)
@@ -289,7 +295,7 @@ class FileMonitor:
             signals.append("new_executable_file")
 
         # 2. Sensitive folder changes
-        if is_sensitive and event_type in ("FILE_CREATED", "FILE_MODIFIED", "FILE_MOVED"):
+        if is_sensitive and event_type in ("FILE_CREATED", "FILE_MODIFIED", "FILE_MOVED", "FOLDER_CREATED"):
             signals.append("sensitive_folder_modification")
 
         # 3. Rapid sequential modifications
@@ -306,7 +312,7 @@ class FileMonitor:
 
         # 6. Integrated Detection Engines (YARA, Static Analysis, Hash Reputation)
         detection_details: Dict[str, Any] = {}
-        if event_type != "FILE_DELETED" and os.path.isfile(file_path):
+        if not is_directory and "DELETED" not in event_type and os.path.isfile(file_path):
             if self.yara_engine:
                 yara_res = self.yara_engine.scan_file(file_path)
                 if yara_res.get("signals"):
@@ -329,6 +335,13 @@ class FileMonitor:
                     signals.extend(rep_res["signals"])
                     detection_details["reputation"] = rep_res
 
+        # Determine responsible process from active foreground window
+        responsible_proc = None
+        if self.window_monitor:
+            curr_act = self.window_monitor.get_current_activity()
+            if curr_act:
+                responsible_proc = curr_act.get("process_name")
+
         event = FileEvent(
             event_type=event_type,
             file_path=file_path,
@@ -338,9 +351,11 @@ class FileMonitor:
             entropy=entropy,
             is_executable=is_exec,
             is_sensitive_location=is_sensitive,
+            responsible_process=responsible_proc,
             signals=signals,
             metadata={
                 "src_path": src_path,
+                "is_directory": is_directory,
                 "window_mod_count": mod_count,
                 "window_del_count": del_count,
                 "window_high_entropy_count": high_entropy_count,
@@ -348,8 +363,18 @@ class FileMonitor:
             },
         )
 
+        with self._recent_lock:
+            self._recent_activities.insert(0, event.to_dict())
+            if len(self._recent_activities) > 50:
+                self._recent_activities.pop()
+
         self.emit_event(event)
         return event
+
+    def get_recent_activities(self, limit: int = 20) -> List[Dict[str, Any]]:
+        """Returns the recent file system activities list."""
+        with self._recent_lock:
+            return list(self._recent_activities[:limit])
 
     def start(self, watch_paths: Optional[List[str]] = None):
         """Starts monitoring configured directories recursively with Watchdog."""

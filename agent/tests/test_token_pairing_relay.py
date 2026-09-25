@@ -145,3 +145,100 @@ def test_server_pair_mobile_and_monitoring_scope(tmp_path):
     assert revoke_data["success"] is True
     assert revoke_data["new_token"] != mobile_token
     assert server.pairing_token == revoke_data["new_token"]
+
+
+def test_cloud_relay_offline_buffering_and_flush():
+    relay = CloudRelay(pairing_token="DIQ-BUFFER-TEST", enabled=True)
+    assert relay.get_buffered_events_count() == 0
+
+    # Mock urlopen failure to simulate temporary network loss
+    with patch("urllib.request.urlopen", side_effect=Exception("Network Unreachable")):
+        ok = relay.publish_download_event({"file_name": "offline_sample.exe", "scan_verdict": "CLEAN"})
+        assert ok is False
+        assert relay.get_buffered_events_count() == 1
+
+        relay.publish_file_activity({"file_name": "data.txt", "event_type": "FILE_CREATED"})
+        assert relay.get_buffered_events_count() == 2
+
+    # Now restore network connection and flush buffer
+    with patch("urllib.request.urlopen") as mock_restore:
+        mock_resp = MagicMock()
+        mock_resp.status = 200
+        mock_restore.return_value.__enter__.return_value = mock_resp
+
+        flushed = relay.flush_offline_buffer()
+        assert flushed == 2
+        assert relay.get_buffered_events_count() == 0
+
+
+def test_cloud_relay_rotate_token_and_state():
+    relay = CloudRelay(pairing_token="DIQ-OLD-TOKEN", enabled=True)
+    assert relay.pairing_token == "DIQ-OLD-TOKEN"
+
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        mock_resp = MagicMock()
+        mock_resp.status = 200
+        mock_urlopen.return_value.__enter__.return_value = mock_resp
+
+        new_t = relay.rotate_token("DIQ-NEW-TOKEN")
+        assert new_t == "DIQ-NEW-TOKEN"
+        assert relay.pairing_token == "DIQ-NEW-TOKEN"
+
+        # Publish system state
+        ok_state = relay.publish_system_state("SLEEP", reason="System entering low power state")
+        assert ok_state is True
+
+
+def test_server_extended_endpoints(tmp_path):
+    server = LocalServer(
+        host="127.0.0.1",
+        port=8765,
+        settings=default_settings,
+        pairing_token="TEST_SECRET_TOKEN",
+    )
+    client = TestClient(server.app)
+    headers = {"Authorization": "Bearer TEST_SECRET_TOKEN"}
+
+    # 1. GET /activities/windows
+    res_win = client.get("/activities/windows", headers=headers)
+    assert res_win.status_code == 200
+    assert "current_activity" in res_win.json()
+
+    # 2. GET /activities/downloads
+    res_dl = client.get("/activities/downloads", headers=headers)
+    assert res_dl.status_code == 200
+    assert "downloads" in res_dl.json()
+
+    # 3. GET /activities/files
+    res_files = client.get("/activities/files", headers=headers)
+    assert res_files.status_code == 200
+    assert "activities" in res_files.json()
+
+    # 4. GET /device/status
+    res_dev = client.get("/device/status", headers=headers)
+    assert res_dev.status_code == 200
+    dev_data = res_dev.json()
+    assert "system_metrics" in dev_data
+    assert "cpu_percent" in dev_data["system_metrics"]
+    assert "online_status" in dev_data
+
+    # 5. POST /simulate/alert (Red Alert simulation)
+    res_sim = client.post("/simulate/alert", json={"scenario": "mass_file_modification"}, headers=headers)
+    assert res_sim.status_code == 200
+    sim_data = res_sim.json()
+    assert sim_data["success"] is True
+    inc_id = sim_data["incident_id"]
+
+    # 6. POST /actions/respond
+    res_ack = client.post("/actions/respond", json={"action": "acknowledge", "incident_id": inc_id}, headers=headers)
+    assert res_ack.status_code == 200
+    assert res_ack.json()["result"]["status"] == "ACKNOWLEDGED"
+
+    res_inv = client.post("/actions/respond", json={"action": "investigate", "incident_id": inc_id}, headers=headers)
+    assert res_inv.status_code == 200
+    assert res_inv.json()["result"]["status"] == "INVESTIGATED"
+
+    # 7. POST /rotate-token
+    res_rot = client.post("/rotate-token", headers=headers)
+    assert res_rot.status_code == 200
+    assert "new_token" in res_rot.json()

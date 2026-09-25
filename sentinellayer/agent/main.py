@@ -17,6 +17,8 @@ from sentinellayer.agent.monitors.process_monitor import ProcessEvent, ProcessMo
 from sentinellayer.agent.monitors.file_monitor import FileEvent, FileMonitor
 from sentinellayer.agent.monitors.network_monitor import NetworkEvent, NetworkMonitor
 from sentinellayer.agent.monitors.usb_monitor import USBEvent, USBMonitor
+from sentinellayer.agent.monitors.window_monitor import WindowMonitor
+from sentinellayer.agent.monitors.download_monitor import DownloadMonitor
 
 from sentinellayer.agent.detection.static_analysis import StaticAnalyzer
 from sentinellayer.agent.detection.yara_engine import YaraEngine
@@ -120,13 +122,17 @@ async def main():
         print("=" * 70)
         return
 
+    # 0. Active Window & Browser Tab Monitor
+    window_monitor = WindowMonitor(poll_interval=2.0)
+    window_monitor.start()
+
     # 1. Process Monitor
     proc_monitor = ProcessMonitor(
         event_bus=event_queue,
         config=default_settings.process_monitor,
     )
 
-    # 2. File Monitor (with integrated Detection Engines)
+    # 2. File Monitor (with integrated Detection Engines & Window Context)
     file_monitor = FileMonitor(
         event_bus=event_queue,
         config=default_settings.file_monitor,
@@ -134,6 +140,7 @@ async def main():
         static_analyzer=static_analyzer,
         yara_engine=yara_engine,
         reputation_engine=reputation_engine,
+        window_monitor=window_monitor,
     )
 
     # 3. Network Monitor
@@ -150,6 +157,15 @@ async def main():
         yara_engine=yara_engine,
         reputation_engine=reputation_engine,
     )
+
+    # 5. Download Monitor (Tracks incoming files, origin domains & scans)
+    download_monitor = DownloadMonitor(
+        static_analyzer=static_analyzer,
+        yara_engine=yara_engine,
+        reputation_engine=reputation_engine,
+        window_monitor=window_monitor,
+    )
+    download_monitor.start()
 
     # Cross-layer telemetry link: if a process spawns with suspicious signals,
     # notify the network monitor so subsequent outbound connections from it are tagged!
@@ -175,6 +191,7 @@ async def main():
 
     # Local Wi-Fi API & WebSocket Alerts Server
     server = None
+    cloud_relay = None
     if not args.no_server:
         usb_bridge = USBBridge(local_port=args.port or default_settings.port)
         bluetooth_bridge = BluetoothBridge()
@@ -187,6 +204,9 @@ async def main():
             response_engine=response_engine,
             usb_bridge=usb_bridge,
             bluetooth_bridge=bluetooth_bridge,
+            window_monitor=window_monitor,
+            download_monitor=download_monitor,
+            file_monitor=file_monitor,
         )
         def on_mobile_command(envelope: dict):
             cmd_type = envelope.get("type")
@@ -208,6 +228,18 @@ async def main():
                         logger.info(f"[MOBILE COMMAND] Protection level updated to {new_lvl}")
                     except ValueError:
                         pass
+            elif cmd_type == "SUSPEND_PROCESS":
+                pid = data.get("pid")
+                if pid:
+                    from sentinellayer.agent.response.process_controller import ProcessController
+                    pc = ProcessController()
+                    ok = pc.suspend_process(pid)
+                    logger.info(f"[MOBILE COMMAND] Suspended PID {pid}: {ok}")
+            elif cmd_type == "ACKNOWLEDGE":
+                inc_id = data.get("incident_id")
+                if inc_id:
+                    db.update_incident_status(inc_id, "ACKNOWLEDGED")
+                    logger.info(f"[MOBILE COMMAND] Incident {inc_id} marked as acknowledged.")
 
         cloud_token = args.pair.strip().upper() if args.pair else server.pairing_token
         cloud_relay = CloudRelay(
@@ -220,6 +252,19 @@ async def main():
         cloud_relay.start_listener()
         server.process_monitor = proc_monitor
         server.network_monitor = net_monitor
+
+        # Stream download and file events to cloud relay for mobile dashboard
+        def on_download_event(dl_ev):
+            if cloud_relay and cloud_relay.enabled:
+                cloud_relay.publish_download_event(dl_ev.to_dict())
+
+        download_monitor.register_callback(on_download_event)
+
+        def on_file_event(f_ev):
+            if cloud_relay and cloud_relay.enabled:
+                cloud_relay.publish_file_activity(f_ev.to_dict())
+
+        file_monitor.register_callback(on_file_event)
 
     def on_incident_update(inc: Incident):
         db.save_incident(inc)
@@ -311,6 +356,76 @@ async def main():
             print("=" * 70)
         return
 
+    async def heartbeat_loop():
+        """Periodically streams endpoint health, CPU/RAM/disk metrics, active tab, and downloads."""
+        import psutil
+        import time
+        last_tick_time = time.time()
+        while True:
+            try:
+                await asyncio.sleep(4.0)
+                now_tick = time.time()
+                time_diff = now_tick - last_tick_time
+                last_tick_time = now_tick
+
+                if time_diff > 15.0:
+                    logger.warning(f"Time jump detected ({int(time_diff)}s gap). Host resumed from sleep or hibernation.")
+                    if server and server.cloud_relay:
+                        server.cloud_relay.publish_system_state("ONLINE", reason="Resumed from sleep/hibernation")
+
+                if server and server.cloud_relay and server.cloud_relay.enabled:
+                    cpu_p = psutil.cpu_percent(interval=None)
+                    ram = psutil.virtual_memory()
+                    disk = psutil.disk_usage(os.path.splitdrive(os.getcwd())[0] or "/")
+                    battery = psutil.sensors_battery()
+
+                    active_win = window_monitor.get_current_activity()
+                    recent_dls = download_monitor.get_recent_downloads(limit=5)
+                    recent_files = file_monitor.get_recent_activities(limit=10)
+
+                    recent_incidents = db.get_recent_incidents(limit=30)
+                    sev_counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFORMATION": 0}
+                    for inc in recent_incidents:
+                        score = inc.get("risk_score", 0)
+                        if score >= 85 or inc.get("risk_band") == "RED":
+                            sev_counts["CRITICAL"] += 1
+                        elif score >= 70 or inc.get("risk_band") == "ORANGE":
+                            sev_counts["HIGH"] += 1
+                        elif score >= 50:
+                            sev_counts["MEDIUM"] += 1
+                        elif score >= 20:
+                            sev_counts["LOW"] += 1
+                        else:
+                            sev_counts["INFORMATION"] += 1
+
+                    status_payload = {
+                        "online_status": "ONLINE",
+                        "health_state": "CRITICAL_THREAT" if sev_counts["CRITICAL"] > 0 else ("HIGH_RISK" if sev_counts["HIGH"] > 0 else "SECURE"),
+                        "protection_level": default_settings.protection_level.value,
+                        "system_metrics": {
+                            "cpu_percent": round(cpu_p, 1),
+                            "ram_percent": round(ram.percent, 1),
+                            "ram_used_gb": round(ram.used / (1024**3), 2),
+                            "ram_total_gb": round(ram.total / (1024**3), 2),
+                            "disk_percent": round(disk.percent, 1),
+                            "disk_free_gb": round(disk.free / (1024**3), 1),
+                            "battery_percent": round(battery.percent, 1) if battery else None,
+                            "battery_plugged": battery.power_plugged if battery else True,
+                        },
+                        "network_status": {
+                            "hostname": default_settings.device_id,
+                            "local_ip": default_settings.host,
+                        },
+                        "active_window": active_win,
+                        "recent_downloads": recent_dls,
+                        "recent_file_activities": recent_files,
+                        "threat_count": len(recent_incidents),
+                        "severity_counts": sev_counts,
+                    }
+                    server.cloud_relay.publish_status_heartbeat(status_payload)
+            except Exception as e:
+                logger.debug(f"Heartbeat loop tick note: {e}")
+
     # Production background service loop
     logger.info("Starting Process, File, Network, and USB Monitors, and Event Correlator...")
     proc_task = asyncio.create_task(proc_monitor.start())
@@ -318,6 +433,7 @@ async def main():
     usb_task = asyncio.create_task(usb_monitor.start())
     file_monitor.start()
     self_monitor.start()
+    heartbeat_task = asyncio.create_task(heartbeat_loop())
 
     if server:
         server.start_in_thread()
@@ -346,6 +462,10 @@ async def main():
             event_queue.task_done()
     except (KeyboardInterrupt, asyncio.CancelledError):
         logger.info("Shutting down DefenceIQ agent...")
+        if server and server.cloud_relay:
+            server.cloud_relay.publish_status_heartbeat({"online_status": "SHUTDOWN"})
+        window_monitor.stop()
+        download_monitor.stop()
         if server:
             server.stop()
         self_monitor.stop()
@@ -356,6 +476,7 @@ async def main():
         proc_task.cancel()
         net_task.cancel()
         usb_task.cancel()
+        heartbeat_task.cancel()
 
 
 if __name__ == "__main__":

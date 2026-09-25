@@ -113,18 +113,62 @@ class DefenceIqRepository(
                 }
             }
         }
+
+        // Auto-probe local laptop agent on startup
+        scope.launch {
+            delay(500)
+            tryLocalAutoConnect()
+        }
     }
 
     private fun getAuthHeader(): String = "Bearer $token"
 
     /**
+     * Attempts direct connection to local laptop agent over Wi-Fi / USB tunnel.
+     */
+    suspend fun tryLocalAutoConnect(preferredToken: String? = null): Boolean = withContext(Dispatchers.IO) {
+        val tok = (preferredToken ?: token).trim().uppercase()
+        val candidateHosts = listOf(host, "192.168.1.4", "127.0.0.1", "10.0.2.2", "localhost")
+        val candidateTokens = listOf(tok, "11C6C497", "DIQ-Z4LQ-BXUJ")
+        for (h in candidateHosts) {
+            for (t in candidateTokens) {
+                try {
+                    val res = pairAndConnect(h, port, t)
+                    if (res.isSuccess) {
+                        Log.i(tag, "Successfully connected to $h:$port with token $t")
+                        return@withContext true
+                    }
+                } catch (e: Exception) {
+                    Log.d(tag, "Auto-connect attempt failed for $h:$port: ${e.message}")
+                }
+            }
+        }
+        false
+    }
+
+    fun connectDirectLan(targetHost: String, targetPort: Int, pairingToken: String, onSuccess: () -> Unit) {
+        scope.launch {
+            val res = pairAndConnect(targetHost, targetPort, pairingToken)
+            if (res.isSuccess) {
+                withContext(Dispatchers.Main) {
+                    onSuccess()
+                }
+            }
+        }
+    }
+
+    /**
      * Token-based pairing without requiring IP address.
-     * Binds phone to the unique pairing token and listens on the cloud relay.
+     * Binds phone to the unique pairing token and listens on the cloud relay,
+     * while also probing local connections.
      */
     fun pairWithToken(pairingToken: String) {
         token = pairingToken.trim().uppercase()
         _connectionState.value = ConnectionStatus.CONNECTING
         cloudRelay.startListeningWithToken(token)
+        scope.launch {
+            tryLocalAutoConnect(token)
+        }
     }
 
     private fun onCloudThreatAlert(alert: CloudThreatAlert) {

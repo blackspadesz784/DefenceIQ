@@ -67,7 +67,7 @@ fun DashboardScreen(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (connectionState == ConnectionStatus.CONNECTED) "Linked via E2E Relay" else "Offline / Disconnected",
+                    text = if (connectionState == ConnectionStatus.CONNECTED) "Connected (Live)" else "Offline / Disconnected",
                     fontSize = 12.sp,
                     color = TextPrimary,
                     fontWeight = FontWeight.Medium
@@ -77,6 +77,7 @@ fun DashboardScreen(
             IconButton(
                 onClick = {
                     coroutineScope.launch {
+                        repository.tryLocalAutoConnect()
                         repository.refreshStatus()
                         repository.refreshIncidents()
                     }

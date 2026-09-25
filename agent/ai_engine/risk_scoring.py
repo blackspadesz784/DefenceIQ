@@ -29,11 +29,13 @@ class ScoreResult:
     band: str  # GREEN, YELLOW, ORANGE, RED
     contributing_signals: List[ContributingSignal]
     explanation: str
+    severity_level: str = "INFORMATION"  # INFORMATION, LOW, MEDIUM, HIGH, CRITICAL
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "score": self.score,
             "band": self.band,
+            "severity_level": self.severity_level,
             "contributing_signals": [
                 {
                     "name": s.name,
@@ -232,15 +234,19 @@ class RiskScoringEngine:
         # Clamped to 0–100
         score = min(max(raw_score, 0), 100)
 
-        # Determine score band
+        # Determine score band and 5-tier severity level
         if score <= self.settings.green_band_max:
             band = "GREEN"
+            severity = "INFORMATION" if score < 15 else "LOW"
         elif score <= self.settings.yellow_band_max:
             band = "YELLOW"
+            severity = "LOW" if score <= 45 else "MEDIUM"
         elif score <= self.settings.orange_band_max:
             band = "ORANGE"
+            severity = "MEDIUM" if score <= 70 else "HIGH"
         else:
             band = "RED"
+            severity = "CRITICAL"
 
         # Generate human-readable explainability narrative
         explanation = self._build_explanation(score, band, contributing)
@@ -248,6 +254,7 @@ class RiskScoringEngine:
         return ScoreResult(
             score=score,
             band=band,
+            severity_level=severity,
             contributing_signals=contributing,
             explanation=explanation,
         )

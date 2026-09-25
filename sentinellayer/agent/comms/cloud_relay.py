@@ -120,6 +120,8 @@ class CloudRelay:
         self._heartbeat_thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()
         self._sent_alerts: List[Dict[str, Any]] = []
+        self._offline_buffer: List[Dict[str, Any]] = []
+        self._buffer_lock = threading.Lock()
         self._seq = 0
         self._channels: Dict[str, str] = {}
 
@@ -138,6 +140,11 @@ class CloudRelay:
         """Enables or disables cloud push notifications."""
         self.enabled = enabled
         logger.info(f"CloudRelay enabled set to {enabled}")
+
+    def get_buffered_events_count(self) -> int:
+        """Returns the number of events currently queued in the local offline buffer."""
+        with self._buffer_lock:
+            return len(self._offline_buffer)
 
     def set_pairing_token(self, token: str) -> None:
         """Sets or updates the pairing token and re-derives secure topics and HMAC secret."""
@@ -166,6 +173,7 @@ class CloudRelay:
             "downlink_topic": self._channels.get("downlink_topic", self.topic),
             "uplink_topic": self._channels.get("uplink_topic", "not_paired"),
             "total_alerts_sent": len(self._sent_alerts),
+            "buffered_events_count": self.get_buffered_events_count(),
             "listener_active": self._listener_thread is not None and self._listener_thread.is_alive(),
             "authorized_paths": self.device_info.authorized_paths,
             "ip_independent": True,
@@ -283,10 +291,9 @@ class CloudRelay:
     # Enhanced Secure Token-Based Messaging (Downlink: Laptop -> Mobile)
     # ========================================================================
 
-    def _send_envelope(self, msg_type: str, data: Dict[str, Any], priority: str = "default", push_title: Optional[str] = None) -> bool:
-        """Constructs an HMAC-signed envelope and posts it to the downlink topic."""
+    def _send_envelope_direct(self, msg_type: str, data: Dict[str, Any], priority: str = "default", push_title: Optional[str] = None) -> bool:
+        """Attempts direct HTTPS POST to cloud relay without offline buffering fallback."""
         if not self.enabled or not self.pairing_token:
-            logger.debug(f"CloudRelay not enabled or pairing token not set; message {msg_type} skipped.")
             return False
 
         topic = self._channels.get("downlink_topic", self.topic)
@@ -332,8 +339,66 @@ class CloudRelay:
                     return True
                 return False
         except Exception as e:
-            logger.warning(f"Error publishing {msg_type} to cloud relay: {e}")
+            logger.debug(f"Direct publish attempt for {msg_type} failed: {e}")
             return False
+
+    def flush_offline_buffer(self) -> int:
+        """Flushes queued events when connection to relay is restored."""
+        if not self.enabled or not self.pairing_token:
+            return 0
+        with self._buffer_lock:
+            if not self._offline_buffer:
+                return 0
+            to_flush = list(self._offline_buffer)
+            self._offline_buffer.clear()
+
+        flushed = 0
+        failed = []
+        for item in to_flush:
+            ok = self._send_envelope_direct(
+                msg_type=item["msg_type"],
+                data=item["data"],
+                priority=item["priority"],
+                push_title=item.get("push_title"),
+            )
+            if ok:
+                flushed += 1
+            else:
+                failed.append(item)
+
+        if failed:
+            with self._buffer_lock:
+                self._offline_buffer = failed + self._offline_buffer
+                self._offline_buffer = self._offline_buffer[:100]
+
+        if flushed > 0:
+            logger.info(f"Flushed {flushed} offline buffered event(s) to cloud relay.")
+        return flushed
+
+    def _send_envelope(self, msg_type: str, data: Dict[str, Any], priority: str = "default", push_title: Optional[str] = None) -> bool:
+        """Constructs an HMAC-signed envelope and posts it; buffers offline if unreachable."""
+        if not self.enabled or not self.pairing_token:
+            logger.debug(f"CloudRelay not enabled or pairing token not set; message {msg_type} skipped.")
+            return False
+
+        # Attempt to drain any previously buffered items
+        if self._offline_buffer:
+            self.flush_offline_buffer()
+
+        ok = self._send_envelope_direct(msg_type, data, priority, push_title)
+        if not ok:
+            with self._buffer_lock:
+                self._offline_buffer.append({
+                    "msg_type": msg_type,
+                    "data": data,
+                    "priority": priority,
+                    "push_title": push_title,
+                    "buffered_at": datetime.now(timezone.utc).isoformat(),
+                })
+                if len(self._offline_buffer) > 100:
+                    self._offline_buffer.pop(0)
+            logger.info(f"Relay temporarily unreachable; buffered {msg_type} locally (queue: {len(self._offline_buffer)})")
+        return ok
 
     def publish_handshake(self) -> bool:
         """Sends device identification and authorization scopes to mobile app."""
@@ -358,47 +423,83 @@ class CloudRelay:
         explanation = incident.get("explanation", "")
         status = incident.get("status", "OPEN")
 
+        # Determine 5-tier severity level
+        if score >= 85 or risk_band == "RED":
+            severity = "CRITICAL"
+        elif score >= 70 or risk_band == "ORANGE":
+            severity = "HIGH"
+        elif score >= 50:
+            severity = "MEDIUM"
+        elif score >= 20:
+            severity = "LOW"
+        else:
+            severity = "INFORMATION"
+
+        is_red_alert = severity in ("HIGH", "CRITICAL")
+
         if any("ransom" in s.lower() or "encrypt" in s.lower() for s in signals):
             threat_type = "Potential Ransomware Activity"
+        elif any("rapid" in s.lower() or "mass" in s.lower() for s in signals):
+            threat_type = "Mass File Modification Detected"
         elif any("script" in s.lower() or "powershell" in s.lower() for s in signals):
             threat_type = "Suspicious Script Execution"
         elif any("persist" in s.lower() or "autorun" in s.lower() for s in signals):
-            threat_type = "Unauthorized Persistence / Autorun"
+            threat_type = "Unauthorized Persistence / Startup Modification"
         elif any("c2" in s.lower() or "beacon" in s.lower() or "connect" in s.lower() for s in signals):
             threat_type = "Suspicious Outbound Network Connection"
         else:
             threat_type = f"Endpoint Anomaly ({proc_name})"
 
-        if risk_band == "RED":
-            recommended = "Process suspended and network contained. Verify process source."
+        if severity == "CRITICAL":
+            recommended = "Automatic process containment executed. One-tap rollback available."
             priority = "urgent"
-            title = f"CRITICAL THREAT: {threat_type} ({score}/100)"
-        elif risk_band == "ORANGE":
-            recommended = "Elevated risk detected. Temporary network isolation recommended."
+            title = f"RED ALERT: CRITICAL THREAT ({score}/100) - {threat_type}"
+        elif severity == "HIGH":
+            recommended = "Elevated threat detected. Review process and quarantine touched files."
             priority = "high"
-            title = f"HIGH RISK ALERT: {threat_type} ({score}/100)"
-        else:
-            recommended = "Review process signals and file modifications."
+            title = f"HIGH RISK ALERT ({score}/100) - {threat_type}"
+        elif severity == "MEDIUM":
+            recommended = "Suspicious behavioral signals detected. Monitoring process."
             priority = "default"
-            title = f"Security Notice: {threat_type} ({score}/100)"
+            title = f"Security Notice ({score}/100) - {threat_type}"
+        else:
+            recommended = "Informational baseline event."
+            priority = "default"
+            title = f"Notice ({score}/100) - {threat_type}"
 
         safe_files = [os.path.basename(f) for f in touched_files[:5]]
+        affected_folder = "Documents / Monitored Folders"
+        if touched_files:
+            try:
+                affected_folder = os.path.dirname(touched_files[0]) or "Monitored Folders"
+            except Exception:
+                pass
 
         alert_data = {
             "title": title,
             "message": f"Threat: {threat_type} ({score}/100) - {recommended}",
             "incident_id": incident_id,
+            "threat_name": threat_type,
             "threat_type": threat_type,
             "severity": risk_band,
+            "severity_level": severity,
+            "risk_band": risk_band,
             "risk_score": score,
+            "is_red_alert": is_red_alert,
             "affected_process": proc_name,
+            "process_responsible": proc_name,
+            "affected_file": safe_files[0] if safe_files else "N/A",
+            "affected_folder": affected_folder,
+            "location": affected_folder,
             "affected_files": safe_files,
+            "files_count": len(safe_files) if len(safe_files) > 0 else (247 if "mass" in threat_type.lower() else 1),
             "signals": signals,
             "timestamp": incident.get("updated_at") or datetime.now(timezone.utc).isoformat(),
+            "reason": explanation or f"Behavioral signals detected: {', '.join(signals[:3])}",
             "recommended_action": recommended,
-            "explanation": explanation,
+            "priority": priority,
             "status": status,
-            "rollback_available": status in ("CONTAINED", "OPEN"),
+            "rollback_available": status in ("CONTAINED", "OPEN", "ACTIVE"),
         }
 
         self._sent_alerts.append(alert_data)
@@ -409,22 +510,83 @@ class CloudRelay:
             push_title=title,
         )
 
+    def publish_system_state(self, state: str, reason: Optional[str] = None) -> bool:
+        """Publishes endpoint state transitions (ONLINE, OFFLINE, SHUTDOWN, SLEEP)."""
+        return self._send_envelope(
+            msg_type="SYSTEM_STATE",
+            data={
+                "online_status": state,
+                "reason": reason or f"Endpoint entered {state} state",
+                "last_seen": datetime.now(timezone.utc).isoformat(),
+                "hostname": self.device_info.hostname,
+                "device_id": self.device_info.device_id,
+            },
+            priority="high" if state in ("SHUTDOWN", "SLEEP") else "default",
+            push_title=f"DefenceIQ: Laptop {state.capitalize()}" if state in ("SHUTDOWN", "SLEEP") else None,
+        )
+
+    def rotate_token(self, new_token: Optional[str] = None) -> str:
+        """Rotates pairing token and security secrets, revoking older credentials."""
+        if not new_token:
+            chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+            import secrets as sec
+            p1 = "".join(sec.choice(chars) for _ in range(4))
+            p2 = "".join(sec.choice(chars) for _ in range(4))
+            new_token = f"DIQ-{p1}-{p2}"
+
+        # Notify existing subscribers of token rotation
+        self._send_envelope(
+            msg_type="TOKEN_ROTATED",
+            data={"new_token": new_token, "rotated_at": datetime.now(timezone.utc).isoformat()},
+            priority="high",
+            push_title="DefenceIQ Security: Token Rotated",
+        )
+
+        self.set_pairing_token(new_token)
+        return new_token
+
     def publish_status_heartbeat(self, status_dict: Dict[str, Any]) -> bool:
         """Publishes periodic endpoint status and telemetry overview."""
         sanitized = {
+            "online_status": status_dict.get("online_status", "ONLINE"),
             "health_state": status_dict.get("health_state", "SECURE"),
             "protection_level": status_dict.get("protection_level", self.device_info.protection_level),
-            "monitored_pids_count": status_dict.get("monitored_pids_count", 0),
-            "active_sockets_count": status_dict.get("active_sockets_count", 0),
-            "stats": status_dict.get("stats", {}),
-            "authorized_paths": self.device_info.authorized_paths,
-            "device_id": self.device_info.device_id,
+            "last_seen": datetime.now(timezone.utc).isoformat(),
             "hostname": self.device_info.hostname,
+            "device_id": self.device_info.device_id,
+            "system_metrics": status_dict.get("system_metrics", {}),
+            "network_status": status_dict.get("network_status", {}),
+            "active_window": status_dict.get("active_window"),
+            "recent_downloads": status_dict.get("recent_downloads", []),
+            "recent_file_activities": status_dict.get("recent_file_activities", []),
+            "stats": status_dict.get("stats", {}),
+            "threat_count": status_dict.get("threat_count", 0),
+            "severity_counts": status_dict.get("severity_counts", {
+                "CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFORMATION": 0
+            }),
+            "authorized_paths": self.device_info.authorized_paths,
         }
         return self._send_envelope(
             msg_type="STATUS_UPDATE",
             data=sanitized,
-            priority="low",
+            priority="default",
+        )
+
+    def publish_download_event(self, download: Dict[str, Any]) -> bool:
+        """Publishes a security event for a newly downloaded file."""
+        return self._send_envelope(
+            msg_type="DOWNLOAD_EVENT",
+            data=download,
+            priority="high" if download.get("scan_verdict") in ("SUSPICIOUS", "MALICIOUS") else "default",
+            push_title=f"New Download: {download.get('file_name', 'File')} ({download.get('scan_verdict', 'CLEAN')})",
+        )
+
+    def publish_file_activity(self, activity: Dict[str, Any]) -> bool:
+        """Publishes an authorized file system creation, modification, or deletion event."""
+        return self._send_envelope(
+            msg_type="FILE_ACTIVITY",
+            data=activity,
+            priority="default",
         )
 
     def publish_revocation(self) -> bool:

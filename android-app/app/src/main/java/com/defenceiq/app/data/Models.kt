@@ -17,7 +17,12 @@ data class AgentStatusResponse(
     @SerializedName("engines") val engines: Map<String, String>,
     @SerializedName("system_metrics") val systemMetrics: SystemMetrics? = null,
     @SerializedName("active_window") val activeWindow: ActiveWindowGlance? = null,
-    @SerializedName("online_status") val onlineStatus: String? = "ONLINE"
+    @SerializedName("online_status") val onlineStatus: String? = "ONLINE",
+    @SerializedName("connection_status") val connectionStatus: String? = "Connected",
+    @SerializedName("last_seen") val lastSeen: String? = null,
+    @SerializedName("last_connected") val lastConnected: String? = null,
+    @SerializedName("device_type") val deviceType: String? = "Laptop",
+    @SerializedName("paired_device") val pairedDevice: Map<String, Any>? = null
 )
 
 data class SystemMetrics(
@@ -170,7 +175,10 @@ data class QuarantineListResponse(
 )
 
 data class PairRequest(
-    @SerializedName("token") val token: String
+    @SerializedName("token") val token: String,
+    @SerializedName("device_name") val deviceName: String = "Android Mobile",
+    @SerializedName("device_type") val deviceType: String = "Mobile Phone",
+    @SerializedName("confirm") val confirm: Boolean = true
 )
 
 data class PairResponse(
@@ -178,7 +186,40 @@ data class PairResponse(
     @SerializedName("message") val message: String,
     @SerializedName("lan_ip") val lanIp: String,
     @SerializedName("hostname") val hostname: String,
-    @SerializedName("protection_level") val protectionLevel: String
+    @SerializedName("protection_level") val protectionLevel: String,
+    @SerializedName("device_type") val deviceType: String? = "Laptop",
+    @SerializedName("connection_status") val connectionStatus: String? = "Connected"
+)
+
+data class SecurityAlert(
+    @SerializedName("id") val id: String = "",
+    @SerializedName("event_type") val eventType: String = "",
+    @SerializedName("device_name") val deviceName: String = "Laptop",
+    @SerializedName("device_type") val deviceType: String = "Laptop",
+    @SerializedName("timestamp") val timestamp: String = "",
+    @SerializedName("connection_status") val connectionStatus: String = "Connected",
+    @SerializedName("details") val details: String = "",
+    @SerializedName("severity") val severity: String = "INFO" // INFO, WARNING, CRITICAL
+)
+
+data class SecurityAlertsResponse(
+    @SerializedName("count") val count: Int = 0,
+    @SerializedName("alerts") val alerts: List<SecurityAlert> = emptyList()
+)
+
+data class PairingStatusResponse(
+    @SerializedName("status") val status: String = "active",
+    @SerializedName("is_paired") val isPaired: Boolean = false,
+    @SerializedName("paired_device") val pairedDevice: String? = null,
+    @SerializedName("last_seen") val lastSeen: String? = null,
+    @SerializedName("active_token") val activeToken: String? = null,
+    @SerializedName("token_expires_in") val tokenExpiresIn: Long? = null
+)
+
+data class GenerateTokenResponse(
+    @SerializedName("token") val token: String,
+    @SerializedName("expires_in") val expiresIn: Long = 600,
+    @SerializedName("expires_at") val expiresAt: String = ""
 )
 
 data class ProtectionLevelRequest(
@@ -191,7 +232,10 @@ data class WebSocketAlertFrame(
     @SerializedName("incident") val incident: Incident? = null,
     @SerializedName("incident_id") val incidentId: String? = null,
     @SerializedName("level") val level: String? = null,
-    @SerializedName("timestamp") val timestamp: String? = null
+    @SerializedName("timestamp") val timestamp: String? = null,
+    @SerializedName("security_alert") val securityAlert: SecurityAlert? = null,
+    @SerializedName("connection_status") val connectionStatus: String? = null,
+    @SerializedName("last_seen") val lastSeen: String? = null
 )
 
 data class LanTransport(

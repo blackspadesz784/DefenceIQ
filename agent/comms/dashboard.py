@@ -1,48 +1,49 @@
-"""DefenceIQ - Embedded Web Companion Dashboard & Mobile Console.
+"""DefenceIQ - Executive White Web Companion Dashboard & Mobile Console.
 
-Provides an ultra-sleek, responsive Cyberpunk Dark web interface that works
-identically on mobile phone browsers and laptop browsers without IP dependency.
-Supports token-based pairing, real-time threat telemetry, push alerts,
-RED ALERTS, active windows/tabs monitoring, downloads, file/folder events,
-least-privilege scope visualization, and reversible containment rollbacks.
+Provides a clean, professional, high-contrast White/Light dashboard interface for
+monitoring laptop endpoint security, live device connection status, hardware metrics,
+token-based device pairing, automatic security alerts, threat incidents, active windows,
+downloads, files, and quarantine containment.
 """
 
 def get_dashboard_html() -> str:
-    """Returns the complete single-page interactive Cyber-Dark Dashboard HTML."""
+    """Returns the complete single-page interactive White-Theme Dashboard HTML."""
     return """<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>DefenceIQ | AI Endpoint Security & Mobile Threat Monitor</title>
-  <link rel="manifest" href="/manifest.json">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="DefenceIQ">
-  <meta name="theme-color" content="#00e5ff">
-  <link rel="apple-touch-icon" href="/icon-192.png">
+  <title>DefenceIQ | Endpoint Security & Threat Monitor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-dark: #070a12;
-      --bg-card: rgba(14, 20, 34, 0.90);
-      --bg-card-hover: rgba(20, 28, 48, 0.95);
-      --bg-card-border: rgba(0, 229, 255, 0.18);
-      --accent-cyan: #00e5ff;
-      --accent-green: #00ff88;
-      --accent-yellow: #ffd600;
-      --accent-orange: #ff9100;
-      --accent-red: #ff1744;
-      --accent-purple: #b388ff;
-      --text-main: #f1f5f9;
-      --text-muted: #94a3b8;
-      --text-dim: #64748b;
-      --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-      --red-glow: 0 0 25px rgba(255, 23, 68, 0.45);
-      --cyan-glow: 0 0 20px rgba(0, 229, 255, 0.35);
+      --bg-body: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --bg-hover: #e2e8f0;
+      --border-main: #e2e8f0;
+      --border-subtle: #cbd5e1;
+      --border-focus: #3b82f6;
+      --text-main: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      --primary-blue: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-light: #eff6ff;
+      --success-green: #059669;
+      --success-light: #ecfdf5;
+      --warning-amber: #d97706;
+      --warning-light: #fffbeb;
+      --danger-red: #dc2626;
+      --danger-light: #fef2f2;
+      --purple-accent: #7c3aed;
+      --purple-light: #f5f3ff;
+      --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.07), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+      --card-shadow-hover: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --modal-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
     }
 
     * {
@@ -53,156 +54,191 @@ def get_dashboard_html() -> str:
     }
 
     body {
-      background-color: var(--bg-dark);
-      background-image: 
-        radial-gradient(circle at 10% 10%, rgba(0, 229, 255, 0.06) 0%, transparent 45%),
-        radial-gradient(circle at 90% 90%, rgba(0, 255, 136, 0.05) 0%, transparent 45%),
-        linear-gradient(180deg, #070a12 0%, #0a0e1a 100%);
+      background-color: var(--bg-body);
       color: var(--text-main);
-      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       min-height: 100vh;
-      padding-bottom: 70px;
+      padding-bottom: 60px;
+      line-height: 1.5;
     }
 
-    /* Top Sticky App Bar */
+    /* Top Navigation Header */
     header {
-      padding: 12px 18px;
+      padding: 12px 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: rgba(8, 12, 22, 0.88);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border-bottom: 1px solid var(--bg-card-border);
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-main);
       position: sticky;
       top: 0;
       z-index: 1000;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       cursor: pointer;
     }
 
     .brand-icon {
-      width: 36px;
-      height: 36px;
+      width: 38px;
+      height: 38px;
       border-radius: 10px;
-      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-green));
+      background: var(--primary-blue);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 800;
-      color: #050811;
-      font-size: 16px;
-      box-shadow: 0 0 15px rgba(0, 229, 255, 0.4);
+      color: #ffffff;
+      box-shadow: 0 2px 4px rgba(37, 99, 235, 0.25);
+    }
+
+    .brand-icon svg {
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .brand-text-col {
+      display: flex;
+      flex-direction: column;
     }
 
     .brand-title {
-      font-size: 19px;
+      font-size: 18px;
       font-weight: 800;
-      letter-spacing: -0.5px;
-      background: linear-gradient(90deg, #ffffff, var(--accent-cyan));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.3px;
+      color: var(--text-main);
     }
 
     .brand-sub {
-      font-size: 10px;
-      color: var(--accent-green);
-      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--primary-blue);
       text-transform: uppercase;
-      letter-spacing: 1px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
+      letter-spacing: 0.5px;
     }
 
     .header-actions {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
+      flex-wrap: wrap;
     }
 
+    /* Status Pills */
     .status-pill {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      font-weight: 700;
-      padding: 5px 10px;
-      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 9999px;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 7px;
       border: 1px solid transparent;
-      transition: all 0.3s ease;
+      transition: all 0.2s ease;
     }
 
-    .status-pill.online {
-      background: rgba(0, 255, 136, 0.12);
-      border-color: rgba(0, 255, 136, 0.4);
-      color: var(--accent-green);
+    .status-pill.connected, .status-pill.online {
+      background: var(--success-light);
+      border-color: #a7f3d0;
+      color: var(--success-green);
     }
 
-    .status-pill.offline {
-      background: rgba(148, 163, 184, 0.12);
-      border-color: rgba(148, 163, 184, 0.3);
-      color: var(--text-muted);
+    .status-pill.connecting {
+      background: var(--primary-light);
+      border-color: #bfdbfe;
+      color: var(--primary-blue);
     }
 
-    .status-pill.sleep {
-      background: rgba(179, 136, 255, 0.15);
-      border-color: rgba(179, 136, 255, 0.4);
-      color: var(--accent-purple);
+    .status-pill.connection-lost {
+      background: var(--warning-light);
+      border-color: #fde68a;
+      color: var(--warning-amber);
+    }
+
+    .status-pill.disconnected, .status-pill.offline, .status-pill.laptop-offline {
+      background: var(--bg-subtle);
+      border-color: var(--border-subtle);
+      color: var(--text-secondary);
     }
 
     .status-pill.shutdown {
-      background: rgba(255, 23, 68, 0.15);
-      border-color: rgba(255, 23, 68, 0.4);
-      color: var(--accent-red);
+      background: var(--danger-light);
+      border-color: #fecaca;
+      color: var(--danger-red);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .pulse-green { background: #10b981; animation: pulseG 1.8s infinite; }
+    .pulse-blue { background: #3b82f6; animation: pulseB 1.5s infinite; }
+    .pulse-amber { background: #f59e0b; animation: pulseA 1.8s infinite; }
+    .pulse-red { background: #ef4444; }
+    .pulse-gray { background: #94a3b8; }
+
+    @keyframes pulseG {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+      70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+    @keyframes pulseB {
+      0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+      70% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+    }
+    @keyframes pulseA {
+      0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+      70% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
     }
 
     .token-badge {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      background: rgba(0, 229, 255, 0.1);
-      border: 1px solid rgba(0, 229, 255, 0.3);
-      padding: 5px 10px;
-      border-radius: 20px;
-      color: var(--accent-cyan);
+      font-size: 12px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-main);
+      padding: 5px 12px;
+      border-radius: 9999px;
+      color: var(--text-main);
       cursor: pointer;
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
+      font-weight: 600;
       transition: all 0.2s ease;
     }
 
     .token-badge:hover {
-      background: rgba(0, 229, 255, 0.2);
+      background: var(--bg-hover);
+      border-color: var(--border-subtle);
     }
 
-    /* Red Alert Banner (Top Warning Bar) */
+    /* Red Alert Banner */
     #red-alert-banner {
       display: none;
-      background: linear-gradient(90deg, rgba(255, 23, 68, 0.95), rgba(183, 28, 28, 0.95));
-      color: #fff;
-      padding: 14px 18px;
-      box-shadow: var(--red-glow);
-      border-bottom: 2px solid #ff5252;
-      animation: alertPulse 2s infinite alternate;
+      background: #fef2f2;
+      color: #991b1b;
+      border-bottom: 2px solid #ef4444;
+      padding: 14px 24px;
+      box-shadow: 0 2px 4px rgba(220, 38, 38, 0.1);
       position: sticky;
-      top: 60px;
+      top: 63px;
       z-index: 990;
     }
 
-    @keyframes alertPulse {
-      0% { filter: brightness(1); }
-      100% { filter: brightness(1.15); }
-    }
-
     .red-alert-content {
-      max-width: 960px;
+      max-width: 1040px;
       margin: 0 auto;
       display: flex;
       flex-direction: column;
@@ -213,298 +249,442 @@ def get_dashboard_html() -> str:
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 16px;
-      font-weight: 800;
-      letter-spacing: 0.5px;
+      font-size: 15px;
+      font-weight: 700;
     }
 
     .red-alert-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 6px 14px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 8px 16px;
       font-size: 13px;
-      background: rgba(0, 0, 0, 0.25);
-      padding: 10px;
+      background: #fee2e2;
+      padding: 10px 14px;
       border-radius: 8px;
     }
 
     .red-alert-actions {
       display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 6px;
+      gap: 10px;
+      margin-top: 4px;
     }
 
-    /* Main Container & Nav Tabs */
+    /* Container & Layout */
     .container {
-      max-width: 960px;
+      max-width: 1040px;
       margin: 0 auto;
-      padding: 16px;
+      padding: 20px 24px;
     }
 
+    /* Navigation Tabs */
     .nav-tabs {
       display: flex;
       gap: 8px;
       overflow-x: auto;
       padding-bottom: 12px;
-      margin-bottom: 16px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border-main);
       scrollbar-width: none;
     }
     .nav-tabs::-webkit-scrollbar { display: none; }
 
     .tab-btn {
-      background: rgba(14, 20, 34, 0.7);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      color: var(--text-muted);
-      padding: 9px 15px;
-      border-radius: 12px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-main);
+      color: var(--text-secondary);
+      padding: 9px 16px;
+      border-radius: 8px;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       white-space: nowrap;
       transition: all 0.2s ease;
       font-family: inherit;
     }
 
     .tab-btn:hover {
-      background: var(--bg-card-hover);
+      background: var(--bg-subtle);
       color: var(--text-main);
     }
 
     .tab-btn.active {
-      background: rgba(0, 229, 255, 0.15);
-      border-color: var(--accent-cyan);
-      color: var(--accent-cyan);
-      box-shadow: 0 0 14px rgba(0, 229, 255, 0.2);
+      background: var(--primary-blue);
+      border-color: var(--primary-blue);
+      color: #ffffff;
+      box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
     }
 
-    /* Tab content view */
+    .tab-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .badge-count {
+      background: #ef4444;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 9999px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Tab Content Panes */
     .tab-pane {
       display: none;
-      animation: fadeIn 0.25s ease-in;
+      animation: fadeIn 0.2s ease;
     }
-    .tab-pane.active {
-      display: block;
-    }
+    .tab-pane.active { display: block; }
 
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(4px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Cards */
-    .card {
-      background: var(--bg-card);
-      border: 1px solid var(--bg-card-border);
-      border-radius: 18px;
+    /* Device Card (Requirement 7) */
+    .device-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-main);
+      border-radius: 12px;
       padding: 20px;
-      box-shadow: var(--glass-shadow);
-      margin-bottom: 18px;
-      position: relative;
+      margin-bottom: 20px;
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
     }
 
-    .card-header {
+    .device-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .device-info-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .device-icon-box {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      background: var(--primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary-blue);
+    }
+
+    .device-icon-box svg {
+      width: 26px;
+      height: 26px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+    }
+
+    .device-names h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .device-type-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 3px;
+    }
+
+    .device-meta-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      background: var(--bg-subtle);
+      padding: 14px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border-main);
+      font-size: 13px;
+    }
+
+    .device-meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .meta-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .meta-value {
+      font-weight: 600;
+      color: var(--text-main);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+    }
+
+    /* Pairing Section (Requirement 3 & 4) */
+    .pairing-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-main);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: var(--card-shadow);
+    }
+
+    .pairing-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 14px;
-      flex-wrap: wrap;
-      gap: 8px;
     }
 
-    .card-title {
+    .pairing-title {
       font-size: 15px;
       font-weight: 700;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      color: var(--accent-cyan);
       display: flex;
       align-items: center;
       gap: 8px;
+      color: var(--text-main);
     }
 
-    /* Hero Health Badge */
-    .health-hero {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      padding: 16px 0 8px;
+    .pairing-title svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--primary-blue);
+      fill: none;
+      stroke-width: 2;
     }
 
-    .health-circle {
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
+    .token-display-box {
       display: flex;
       align-items: center;
-      justify-content: center;
-      margin-bottom: 12px;
-      border: 3px solid var(--accent-green);
-      box-shadow: 0 0 30px rgba(0, 255, 136, 0.25);
-      font-size: 38px;
-      transition: all 0.4s ease;
-    }
-
-    .health-state-text {
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: 1px;
-      margin-bottom: 4px;
-    }
-
-    .health-desc {
-      font-size: 13px;
-      color: var(--text-muted);
-      max-width: 480px;
-    }
-
-    /* Hardware Gauges Grid */
-    .gauges-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-      gap: 12px;
-      margin-top: 18px;
-    }
-
-    .gauge-box {
-      background: rgba(5, 8, 16, 0.7);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 12px;
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .gauge-label {
-      font-size: 11px;
-      text-transform: uppercase;
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--text-muted);
-      display: flex;
       justify-content: space-between;
-    }
-
-    .gauge-value {
-      font-size: 18px;
-      font-weight: 700;
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--accent-cyan);
-    }
-
-    .gauge-bar-bg {
-      height: 6px;
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-
-    .gauge-bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-green));
-      width: 0%;
-      transition: width 0.5s ease;
-      border-radius: 3px;
-    }
-
-    /* Live Activity Hero Window */
-    .active-window-card {
-      background: linear-gradient(135deg, rgba(0, 229, 255, 0.07), rgba(14, 20, 34, 0.95));
-      border: 1px solid rgba(0, 229, 255, 0.3);
-      border-radius: 16px;
-      padding: 18px;
-      margin-bottom: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .active-window-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .app-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(0, 229, 255, 0.15);
-      border: 1px solid rgba(0, 229, 255, 0.4);
-      padding: 6px 12px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-main);
       border-radius: 10px;
-      font-weight: 700;
-      font-size: 14px;
-      color: #fff;
+      padding: 14px 18px;
+      margin-top: 10px;
+      gap: 12px;
+      flex-wrap: wrap;
     }
 
-    .duration-ticker {
+    .token-code {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 13px;
-      color: var(--accent-green);
-      display: inline-flex;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--primary-blue);
+    }
+
+    .token-expiry-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
       align-items: center;
       gap: 6px;
+      margin-top: 4px;
     }
 
-    .tab-title-display {
-      font-size: 16px;
-      font-weight: 600;
-      color: #fff;
-      word-break: break-word;
+    .paired-state-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--success-light);
+      border: 1px solid #a7f3d0;
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+      gap: 12px;
     }
 
-    .domain-chip {
-      background: rgba(255, 214, 0, 0.12);
-      border: 1px solid rgba(255, 214, 0, 0.35);
-      color: var(--accent-yellow);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      padding: 3px 9px;
-      border-radius: 6px;
-      display: inline-block;
-      align-self: flex-start;
+    .paired-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
-    /* Privacy Banner */
-    .privacy-box {
-      background: rgba(0, 255, 136, 0.06);
-      border-left: 3px solid var(--accent-green);
-      padding: 12px 14px;
-      border-radius: 0 10px 10px 0;
-      font-size: 12px;
-      color: #cbd5e1;
-      line-height: 1.5;
-      margin: 12px 0;
+    .paired-info svg {
+      width: 24px;
+      height: 24px;
+      stroke: var(--success-green);
+      fill: none;
+      stroke-width: 2;
     }
 
-    /* Tables & Feed Lists */
-    .item-list {
+    /* Metric Cards Grid */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .metric-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-main);
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: var(--card-shadow);
       display: flex;
       flex-direction: column;
       gap: 10px;
+      transition: all 0.2s ease;
+    }
+
+    .metric-card:hover {
+      box-shadow: var(--card-shadow-hover);
+      border-color: var(--border-subtle);
+    }
+
+    .metric-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .metric-label-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .metric-icon-small {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--bg-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary-blue);
+    }
+
+    .metric-icon-small svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+    }
+
+    .metric-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .metric-value-huge {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-main);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .progress-bar-bg {
+      background: var(--bg-subtle);
+      height: 6px;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--primary-blue);
+      border-radius: 3px;
+      transition: width 0.4s ease;
+    }
+    .fill-green { background: var(--success-green); }
+    .fill-amber { background: var(--warning-amber); }
+    .fill-red { background: var(--danger-red); }
+
+    .metric-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* List Card Items */
+    .list-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-main);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      box-shadow: var(--card-shadow);
+    }
+
+    .list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-main);
+    }
+
+    .list-title {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-main);
+    }
+
+    .list-title svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--primary-blue);
+      fill: none;
+      stroke-width: 2;
     }
 
     .item-card {
-      background: rgba(10, 15, 26, 0.75);
-      border: 1px solid rgba(255, 255, 255, 0.07);
-      border-radius: 12px;
-      padding: 14px;
-      transition: all 0.2s ease;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-main);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
+      transition: all 0.15s ease;
     }
 
     .item-card:hover {
-      border-color: rgba(0, 229, 255, 0.3);
-      background: rgba(14, 21, 36, 0.85);
+      background: #fafafa;
+      border-color: var(--border-subtle);
     }
 
     .item-card-top {
@@ -516,123 +696,108 @@ def get_dashboard_html() -> str:
     }
 
     .item-name {
-      font-weight: 700;
+      font-weight: 600;
       font-size: 14px;
-      color: #fff;
-      word-break: break-all;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .item-name svg {
+      width: 16px;
+      height: 16px;
+      stroke: var(--text-muted);
+      fill: none;
+      stroke-width: 2;
     }
 
     .item-meta {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
+      font-size: 12px;
       color: var(--text-muted);
       display: flex;
-      gap: 10px;
+      gap: 12px;
       flex-wrap: wrap;
+      align-items: center;
     }
 
-    .item-chips {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-      margin-top: 4px;
-    }
-
-    .chip {
-      background: rgba(255, 255, 255, 0.06);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      padding: 2px 7px;
-      border-radius: 5px;
-      color: var(--text-muted);
-    }
-
-    /* Severity Badges */
+    /* Badges */
     .badge {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 700;
       padding: 3px 8px;
       border-radius: 6px;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.3px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
     }
 
-    .badge-CRITICAL, .badge-RED { background: var(--accent-red); color: #fff; }
-    .badge-HIGH, .badge-ORANGE { background: var(--accent-orange); color: #000; }
-    .badge-MEDIUM, .badge-YELLOW { background: var(--accent-yellow); color: #000; }
-    .badge-LOW, .badge-GREEN { background: var(--accent-green); color: #000; }
-    .badge-INFORMATION, .badge-CLEAN { background: rgba(0, 229, 255, 0.2); color: var(--accent-cyan); border: 1px solid rgba(0, 229, 255, 0.4); }
-    .badge-SUSPICIOUS { background: var(--accent-yellow); color: #000; }
-    .badge-MALICIOUS { background: var(--accent-red); color: #fff; }
+    .badge-CRITICAL, .badge-RED { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+    .badge-HIGH, .badge-ORANGE { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+    .badge-MEDIUM, .badge-YELLOW { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+    .badge-LOW, .badge-GREEN { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+    .badge-INFO, .badge-INFORMATION, .badge-CLEAN { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .badge-WARNING { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
 
-    /* Buttons */
+    /* Action Buttons */
     .btn {
-      border: none;
-      font-weight: 700;
-      padding: 9px 16px;
-      border-radius: 10px;
+      border: 1px solid transparent;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 8px;
       cursor: pointer;
-      font-size: 12px;
-      transition: all 0.2s ease;
+      font-size: 13px;
+      transition: all 0.15s ease;
       display: inline-flex;
       align-items: center;
       gap: 6px;
       font-family: inherit;
     }
 
-    .btn-primary {
-      background: linear-gradient(135deg, var(--accent-cyan), #0091ea);
-      color: #050811;
+    .btn svg {
+      width: 15px;
+      height: 15px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
     }
-    .btn-primary:hover { filter: brightness(1.1); box-shadow: 0 0 12px rgba(0, 229, 255, 0.4); }
+
+    .btn-primary {
+      background: var(--primary-blue);
+      color: #ffffff;
+    }
+    .btn-primary:hover { background: var(--primary-hover); }
 
     .btn-secondary {
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--text-main);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: var(--bg-surface);
+      border-color: var(--border-main);
+      color: var(--text-secondary);
     }
-    .btn-secondary:hover { background: rgba(255, 255, 255, 0.14); }
+    .btn-secondary:hover { background: var(--bg-subtle); color: var(--text-main); }
 
     .btn-danger {
-      background: rgba(255, 23, 68, 0.18);
-      color: var(--accent-red);
-      border: 1px solid rgba(255, 23, 68, 0.45);
+      background: #fef2f2;
+      border-color: #fecaca;
+      color: var(--danger-red);
     }
-    .btn-danger:hover { background: var(--accent-red); color: #fff; }
+    .btn-danger:hover { background: #fee2e2; }
 
     .btn-success {
-      background: rgba(0, 255, 136, 0.18);
-      color: var(--accent-green);
-      border: 1px solid rgba(0, 255, 136, 0.45);
+      background: var(--success-light);
+      border-color: #a7f3d0;
+      color: var(--success-green);
     }
-
-    .btn:active { transform: scale(0.97); }
-
-    /* Inputs */
-    input[type="text"], select {
-      background: rgba(5, 8, 16, 0.85);
-      border: 1px solid rgba(0, 229, 255, 0.3);
-      color: #fff;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 13px;
-      padding: 9px 12px;
-      border-radius: 8px;
-      outline: none;
-      width: 100%;
-    }
-    input[type="text"]:focus, select:focus {
-      border-color: var(--accent-cyan);
-      box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
-    }
+    .btn-success:hover { background: #d1fae5; }
 
     /* Modal Sheet */
     .modal-backdrop {
       display: none;
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.75);
-      backdrop-filter: blur(6px);
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(4px);
       z-index: 2000;
       align-items: center;
       justify-content: center;
@@ -640,63 +805,83 @@ def get_dashboard_html() -> str:
     }
 
     .modal-dialog {
-      background: #0d1322;
-      border: 1px solid var(--accent-cyan);
-      border-radius: 18px;
-      max-width: 500px;
+      background: #ffffff;
+      border: 1px solid var(--border-main);
+      border-radius: 14px;
+      max-width: 480px;
       width: 100%;
       padding: 24px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+      box-shadow: var(--modal-shadow);
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 16px;
     }
 
-    /* Severity Stats Row */
-    .sev-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-      gap: 8px;
-      margin: 12px 0;
-    }
-
-    .sev-pill {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 10px;
-      padding: 8px;
-      text-align: center;
-    }
-
-    .sev-count {
-      font-size: 18px;
+    .modal-title {
+      font-size: 17px;
       font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    input[type="text"] {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
       font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      outline: none;
+      width: 100%;
+      transition: all 0.2s ease;
     }
 
-    .sev-name {
-      font-size: 10px;
+    input[type="text"]:focus {
+      border-color: var(--primary-blue);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    /* Toast Notification */
+    #toast-msg {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #0f172a;
+      color: #ffffff;
+      padding: 12px 18px;
+      border-radius: 8px;
+      box-shadow: var(--modal-shadow);
+      font-size: 13px;
+      font-weight: 500;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      z-index: 3000;
+      animation: toastIn 0.2s ease;
+    }
+
+    @keyframes toastIn {
+      from { transform: translateY(10px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Empty state */
+    .empty-placeholder {
+      padding: 32px 16px;
+      text-align: center;
       color: var(--text-muted);
-      text-transform: uppercase;
-      margin-top: 2px;
+      font-size: 13px;
     }
 
-    /* Live pulse animation */
-    .pulse-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      display: inline-block;
-      animation: pulse 1.6s infinite;
-    }
-    .pulse-green { background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
-    .pulse-red { background: var(--accent-red); box-shadow: 0 0 8px var(--accent-red); }
-    .pulse-amber { background: var(--accent-yellow); box-shadow: 0 0 8px var(--accent-yellow); }
-
-    @keyframes pulse {
-      0% { opacity: 0.4; }
-      50% { opacity: 1; transform: scale(1.2); }
-      100% { opacity: 0.4; }
+    .empty-placeholder svg {
+      width: 36px;
+      height: 36px;
+      stroke: var(--text-light);
+      margin: 0 auto 10px;
+      display: block;
     }
   </style>
 </head>
@@ -705,974 +890,1037 @@ def get_dashboard_html() -> str:
   <!-- App Header -->
   <header>
     <div class="brand" onclick="switchTab('tab-overview')">
-      <div class="brand-icon">DIQ</div>
-      <div>
-        <div class="brand-title">DefenceIQ</div>
-        <div class="brand-sub">
-          <span class="pulse-dot pulse-green" id="header-pulse"></span>
-          <span id="header-conn-text">LIVE SENTINEL</span>
-        </div>
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <div class="brand-text-col">
+        <span class="brand-title">DefenceIQ</span>
+        <span class="brand-sub">Endpoint Security</span>
       </div>
     </div>
+
     <div class="header-actions">
-      <div id="device-status-pill" class="status-pill online">
+      <!-- Live Status Pill (Requirement 1) -->
+      <div id="device-status-pill" class="status-pill connected">
         <span id="status-dot" class="pulse-dot pulse-green"></span>
-        <span id="status-text">ONLINE</span>
+        <span id="status-text">Connected</span>
       </div>
-      <div id="token-badge" class="token-badge" onclick="showModal('pairing-modal')">
-        <span>🔑</span>
-        <span id="token-text">LOADING</span>
+
+      <!-- Pairing Token Badge / Paired Device Indicator -->
+      <div id="header-token-badge" class="token-badge" onclick="showPairingModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        <span id="header-token-text">Pairing...</span>
       </div>
     </div>
   </header>
 
-  <!-- 🔴 Persistent Top RED ALERT Banner (Revealed on Critical Threat) -->
+  <!-- Emergency Red Alert Warning Banner -->
   <div id="red-alert-banner">
     <div class="red-alert-content">
       <div class="red-alert-header">
-        <span>🚨 CRITICAL SECURITY ALERT</span>
-        <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px;" onclick="dismissRedAlert()">✕ Acknowledge</button>
+        <span id="red-alert-title">CRITICAL THREAT DETECTED</span>
+        <span id="red-alert-score" class="badge badge-CRITICAL">SCORE: 95</span>
       </div>
-      <div style="font-size: 15px; font-weight: 800;" id="ra-threat-name">Mass File Modification Detected</div>
       <div class="red-alert-grid">
-        <div><strong>Process:</strong> <span id="ra-process">Unknown Application</span></div>
-        <div><strong>Affected Folder:</strong> <span id="ra-folder">Documents/Projects</span></div>
-        <div><strong>Files Affected:</strong> <span id="ra-count">247</span></div>
-        <div><strong>Time:</strong> <span id="ra-time">Just now</span></div>
-        <div><strong>Risk:</strong> <span id="ra-risk">Possible ransomware-like activity</span></div>
-        <div><strong>Reason:</strong> <span id="ra-reason">Rapid high-entropy file modifications</span></div>
+        <div><strong>Process:</strong> <span id="red-alert-proc">Unknown</span></div>
+        <div><strong>Action:</strong> <span id="red-alert-action">Process Suspended</span></div>
+        <div><strong>Signals:</strong> <span id="red-alert-signals">Mass modifications</span></div>
+        <div><strong>Incident ID:</strong> <span id="red-alert-id">INC-0000</span></div>
       </div>
-      <div style="font-size: 13px;" id="ra-recommendation">Automatic process containment active. Reversible rollback available.</div>
       <div class="red-alert-actions">
-        <button class="btn btn-primary" onclick="investigateActiveRedAlert()">🔍 Investigate Incident</button>
-        <button class="btn btn-secondary" onclick="rollbackActiveRedAlert()">↩️ Execute One-Tap Rollback</button>
-        <button class="btn btn-danger" onclick="suspendActiveRedAlertProcess()">🚫 Suspend Process</button>
+        <button id="btn-red-rollback" class="btn btn-primary" onclick="rollbackActiveIncident()">Reversible Rollback</button>
+        <button class="btn btn-secondary" onclick="dismissRedAlert()">Acknowledge</button>
       </div>
     </div>
   </div>
 
-  <div class="container">
+  <!-- Main Dashboard Container -->
+  <main class="container">
 
-    <!-- Navigation Tabs -->
-    <div class="nav-tabs">
-      <button class="tab-btn active" onclick="switchTab('tab-overview')">📊 Overview</button>
-      <button class="tab-btn" onclick="switchTab('tab-windows')">🪟 Windows & Tabs</button>
-      <button class="tab-btn" onclick="switchTab('tab-downloads')">⬇️ Downloads</button>
-      <button class="tab-btn" onclick="switchTab('tab-files')">📁 File Activity</button>
-      <button class="tab-btn" onclick="switchTab('tab-alerts')">🚨 Security Alerts</button>
-      <button class="tab-btn" onclick="switchTab('tab-scope')">⚙️ Scope & Privacy</button>
-    </div>
+    <!-- Top Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="tab-btn active" id="btn-tab-overview" onclick="switchTab('tab-overview')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>Overview</span>
+      </button>
 
-    <!-- ===================================================================== -->
-    <!-- TAB 1: OVERVIEW & DEVICE STATUS                                       -->
-    <!-- ===================================================================== -->
+      <button class="tab-btn" id="btn-tab-security-alerts" onclick="switchTab('tab-security-alerts')">
+        <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>Security Alerts</span>
+        <span class="badge-count" id="badge-sec-alerts-count" style="display:none;">0</span>
+      </button>
+
+      <button class="tab-btn" id="btn-tab-incidents" onclick="switchTab('tab-incidents')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>Threat Incidents</span>
+        <span class="badge-count" id="btn-threat-count">0</span>
+      </button>
+
+      <button class="tab-btn" id="btn-tab-windows" onclick="switchTab('tab-windows')">
+        <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        <span>Active Windows</span>
+      </button>
+
+      <button class="tab-btn" id="btn-tab-downloads" onclick="switchTab('tab-downloads')">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span>Downloads & Files</span>
+      </button>
+
+      <button class="tab-btn" id="btn-tab-quarantine" onclick="switchTab('tab-quarantine')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span>Quarantine Vault</span>
+      </button>
+
+      <button class="tab-btn" id="btn-tab-settings" onclick="switchTab('tab-settings')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Pairing & Controls</span>
+      </button>
+    </nav>
+
+    <!-- TAB 1: OVERVIEW -->
     <div id="tab-overview" class="tab-pane active">
 
-      <!-- Overall Health Card -->
-      <div class="card">
-        <div class="health-hero">
-          <div id="health-circle" class="health-circle">🛡️</div>
-          <div id="health-title" class="health-state-text" style="color: var(--accent-green);">SYSTEM SECURE</div>
-          <div id="health-desc" class="health-desc">All personal endpoint monitors and heuristic ML engines active. Zero high-risk anomalies detected.</div>
+      <!-- Connection Dashboard Card (Requirement 7) -->
+      <section class="device-card">
+        <div class="device-card-header">
+          <div class="device-info-left">
+            <div class="device-icon-box">
+              <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+            </div>
+            <div class="device-names">
+              <h2 id="dev-host">Security Endpoint</h2>
+              <div class="device-type-label">
+                <span>Laptop Security Agent</span>
+                <span>•</span>
+                <span id="dev-id" style="font-family:'JetBrains Mono',monospace;">LAPTOP-ENDPOINT</span>
+                <span>•</span>
+                <span id="dev-os">Windows 11</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="btn btn-secondary" onclick="fetchStatus(true)">
+              <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              <span>Refresh</span>
+            </button>
+            <button class="btn btn-primary" onclick="showPairingModal()">
+              <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              <span>Pair Device</span>
+            </button>
+          </div>
         </div>
 
-        <!-- Telemetry Gauges -->
-        <div class="gauges-grid">
-          <div class="gauge-box">
-            <div class="gauge-label">
-              <span>CPU Load</span>
-              <span id="gauge-cpu-val">0%</span>
-            </div>
-            <div class="gauge-bar-bg"><div id="gauge-cpu-fill" class="gauge-bar-fill"></div></div>
+        <div class="device-meta-row">
+          <div class="device-meta-item">
+            <span class="meta-label">Live Connection</span>
+            <span class="meta-value" id="card-connection-status" style="color:var(--success-green);">Connected (Live)</span>
           </div>
-          <div class="gauge-box">
-            <div class="gauge-label">
-              <span>Memory</span>
-              <span id="gauge-ram-val">0%</span>
-            </div>
-            <div class="gauge-bar-bg"><div id="gauge-ram-fill" class="gauge-bar-fill"></div></div>
+          <div class="device-meta-item">
+            <span class="meta-label">Last Seen</span>
+            <span class="meta-value" id="card-last-seen">Just now</span>
           </div>
-          <div class="gauge-box">
-            <div class="gauge-label">
-              <span>Storage</span>
-              <span id="gauge-disk-val">0%</span>
-            </div>
-            <div class="gauge-bar-bg"><div id="gauge-disk-fill" class="gauge-bar-fill"></div></div>
+          <div class="device-meta-item">
+            <span class="meta-label">Local LAN Endpoint</span>
+            <span class="meta-value" id="card-lan-ip">127.0.0.1:8765</span>
           </div>
-          <div class="gauge-box">
-            <div class="gauge-label">
-              <span>Battery</span>
-              <span id="gauge-batt-val">100%</span>
-            </div>
-            <div class="gauge-bar-bg"><div id="gauge-batt-fill" class="gauge-bar-fill"></div></div>
+          <div class="device-meta-item">
+            <span class="meta-label">Paired Mobile Device</span>
+            <span class="meta-value" id="card-paired-mobile">Awaiting Mobile Companion</span>
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- Paired Device Info Banner -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">💻 Paired Laptop Status</span>
-          <span id="last-seen-ticker" style="font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--accent-green);">Updated Just Now</span>
-        </div>
-        <div class="item-meta" style="font-size: 12px; gap: 14px;">
-          <div><strong>Host:</strong> <span id="dev-host">Loading...</span></div>
-          <div><strong>Device ID:</strong> <span id="dev-id" style="color: var(--accent-cyan);">--</span></div>
-          <div><strong>Channel:</strong> <span style="color: var(--accent-green);">E2E Relay (IP-Independent)</span></div>
-          <div><strong>Protection:</strong> <span id="dev-prot-lvl" class="badge badge-CLEAN">BALANCED</span></div>
+      <!-- Hardware Telemetry Metric Cards -->
+      <section class="metric-grid">
+        <!-- CPU Usage -->
+        <div class="metric-card">
+          <div class="metric-top">
+            <div class="metric-label-group">
+              <div class="metric-icon-small">
+                <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="15" x2="23" y2="15"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="15" x2="4" y2="15"/></svg>
+              </div>
+              <span class="metric-title">CPU Utilization</span>
+            </div>
+            <span class="metric-value-huge" id="gauge-cpu-val">0%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div id="gauge-cpu-fill" class="progress-fill" style="width: 0%;"></div>
+          </div>
+          <div class="metric-sub">
+            <span id="sub-cpu-cores">4 Cores / 8 Threads</span>
+            <span id="sub-cpu-freq">2.4 GHz</span>
+          </div>
         </div>
 
-        <div style="margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap;">
-          <button class="btn btn-secondary" onclick="showModal('pairing-modal')">🔗 Manage Pairing Token</button>
-          <button class="btn btn-secondary" onclick="rotateTokenAction()">🔄 Rotate Security Secrets</button>
-          <button class="btn btn-secondary" onclick="switchTab('tab-alerts')">🚨 View Threats (<span id="btn-threat-count">0</span>)</button>
+        <!-- RAM Usage -->
+        <div class="metric-card">
+          <div class="metric-top">
+            <div class="metric-label-group">
+              <div class="metric-icon-small">
+                <svg viewBox="0 0 24 24"><path d="M6 19v-3"/><path d="M10 19v-3"/><path d="M14 19v-3"/><path d="M18 19v-3"/><rect x="2" y="5" width="20" height="10" rx="2"/></svg>
+              </div>
+              <span class="metric-title">Memory (RAM)</span>
+            </div>
+            <span class="metric-value-huge" id="gauge-ram-val">0%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div id="gauge-ram-fill" class="progress-fill fill-amber" style="width: 0%;"></div>
+          </div>
+          <div class="metric-sub">
+            <span id="sub-ram-used">0.0 GB Used</span>
+            <span id="sub-ram-total">16.0 GB Total</span>
+          </div>
         </div>
-      </div>
 
-      <!-- Live Active Window Glance -->
-      <div class="active-window-card" id="overview-active-window-box">
-        <div class="active-window-top">
-          <div class="app-badge">
-            <span>💻</span>
-            <span id="ov-app-name">Checking foreground app...</span>
+        <!-- Disk Storage -->
+        <div class="metric-card">
+          <div class="metric-top">
+            <div class="metric-label-group">
+              <div class="metric-icon-small">
+                <svg viewBox="0 0 24 24"><line x1="22" y1="12" x2="2" y2="12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" y1="16" x2="6.01" y2="16"/><line x1="10" y1="16" x2="10.01" y2="16"/></svg>
+              </div>
+              <span class="metric-title">Storage Drive</span>
+            </div>
+            <span class="metric-value-huge" id="gauge-disk-val">0%</span>
           </div>
-          <div class="duration-ticker">
-            <span>⏱️ Active:</span>
-            <span id="ov-duration">0s</span>
+          <div class="progress-bar-bg">
+            <div id="gauge-disk-fill" class="progress-fill" style="width: 0%;"></div>
+          </div>
+          <div class="metric-sub">
+            <span id="sub-disk-free">0 GB Free</span>
+            <span id="sub-disk-total">512 GB Total</span>
           </div>
         </div>
-        <div class="tab-title-display" id="ov-tab-title">Listening for active desktop window...</div>
-        <div id="ov-domain-badge" class="domain-chip" style="display:none;">domain.com</div>
-      </div>
+
+        <!-- Battery Status -->
+        <div class="metric-card">
+          <div class="metric-top">
+            <div class="metric-label-group">
+              <div class="metric-icon-small">
+                <svg viewBox="0 0 24 24"><rect x="1" y="6" width="18" height="12" rx="2"/><line x1="23" y1="11" x2="23" y2="13"/></svg>
+              </div>
+              <span class="metric-title">Battery Status</span>
+            </div>
+            <span class="metric-value-huge" id="gauge-batt-val">100%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div id="gauge-batt-fill" class="progress-fill fill-green" style="width: 100%;"></div>
+          </div>
+          <div class="metric-sub">
+            <span id="sub-batt-plugged">AC Power Connected</span>
+            <span id="sub-batt-health">Optimal</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Active Window & Network Telemetry Card -->
+      <section class="list-card">
+        <div class="list-header">
+          <div class="list-title">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            <span>Network & Active Application</span>
+          </div>
+          <span class="badge badge-CLEAN" id="badge-health-overview">SECURE</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:14px;">
+          <div style="background:var(--bg-subtle); padding:14px; border-radius:8px; border:1px solid var(--border-main);">
+            <div style="font-size:11px; text-transform:uppercase; font-weight:600; color:var(--text-muted); margin-bottom:4px;">Current Active Window / Tab</div>
+            <div style="font-weight:600; font-size:14px; color:var(--text-main);" id="overview-active-title">Desktop Workspace</div>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:2px;" id="overview-active-sub">explorer.exe</div>
+          </div>
+
+          <div style="background:var(--bg-subtle); padding:14px; border-radius:8px; border:1px solid var(--border-main);">
+            <div style="font-size:11px; text-transform:uppercase; font-weight:600; color:var(--text-muted); margin-bottom:4px;">Network I/O Throughput</div>
+            <div style="font-weight:600; font-size:14px; color:var(--text-main);" id="overview-net-speed">DL: 0.0 KB/s • UL: 0.0 KB/s</div>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:2px;" id="overview-net-channel">Local Wi-Fi + Encrypted Cloud Relay</div>
+          </div>
+        </div>
+      </section>
 
     </div>
 
-    <!-- ===================================================================== -->
-    <!-- TAB 2: ACTIVE WINDOWS & BROWSER TABS                                   -->
-    <!-- ===================================================================== -->
+    <!-- TAB 2: AUTOMATIC SECURITY ALERTS (Requirement 2) -->
+    <div id="tab-security-alerts" class="tab-pane">
+      <section class="list-card">
+        <div class="list-header">
+          <div class="list-title">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>Automatic Security Event Log</span>
+          </div>
+          <button class="btn btn-secondary" onclick="fetchSecurityAlerts()">
+            <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            <span>Refresh Alerts</span>
+          </button>
+        </div>
+
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:14px;">
+          Automatic alerts for connection status transitions, new devices, unexpected disconnects, and authentication attempts. No authentication secrets are ever displayed.
+        </p>
+
+        <div id="security-alerts-container">
+          <div class="empty-placeholder">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>No security anomalies or unauthorized connection attempts detected.</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- TAB 3: THREAT INCIDENTS -->
+    <div id="tab-incidents" class="tab-pane">
+      <section class="list-card">
+        <div class="list-header">
+          <div class="list-title">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span>Correlated Threat Incidents</span>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-secondary" onclick="fetchIncidents()">
+              <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              <span>Refresh</span>
+            </button>
+            <button class="btn btn-secondary" onclick="simulateAlert('mass_file_modification')">
+              <span>Simulate Ransomware</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="incidents-container">
+          <div class="empty-placeholder">
+            <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <span>System is clean. No active threat incidents detected.</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- TAB 4: ACTIVE WINDOWS & TABS -->
     <div id="tab-windows" class="tab-pane">
-
-      <!-- Hero Active Window Details -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">🪟 Current Foreground Activity</span>
-          <span class="badge badge-CLEAN" id="win-proc-pid">PID --</span>
+      <section class="list-card">
+        <div class="list-header">
+          <div class="list-title">
+            <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <span>Foreground Window & Browser History</span>
+          </div>
+          <button class="btn btn-secondary" onclick="fetchWindows()">
+            <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            <span>Refresh</span>
+          </button>
         </div>
 
-        <div class="active-window-card" style="margin-bottom: 0;">
-          <div class="active-window-top">
-            <div class="app-badge">
-              <span id="win-app-icon">🌐</span>
-              <span id="win-app-name">Unknown</span>
-            </div>
-            <div class="duration-ticker">
-              <span>⏱️ Active Duration:</span>
-              <span id="win-duration-text">0s</span>
-            </div>
-          </div>
-
-          <div style="font-size: 12px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace;">
-            Browser / App: <span id="win-browser-name" style="color: #fff;">None</span>
-          </div>
-
-          <div class="tab-title-display" id="win-tab-title">--</div>
-          <div id="win-domain-chip" class="domain-chip" style="display: none;">--</div>
-          <div style="font-size: 11px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace;">
-            Started: <span id="win-start-time">--</span>
+        <div id="windows-container">
+          <div class="empty-placeholder">
+            <span>Loading window activities...</span>
           </div>
         </div>
-
-        <div class="privacy-box">
-          <strong>🔒 Strict Privacy Protection Guarantee:</strong>
-          Sensitive page contents, passwords, form fields, search tokens, and messages are automatically redacted before transmission. Telemetry is restricted to window title metadata and duration.
-        </div>
-      </div>
-
-      <!-- Recent Window & Tab History -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">📜 Recent Applications & Websites</span>
-          <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="fetchWindows()">Refresh</button>
-        </div>
-        <div id="windows-history-list" class="item-list">
-          <div style="text-align: center; color: var(--text-muted); padding: 20px;">No window activity logged yet.</div>
-        </div>
-      </div>
-
+      </section>
     </div>
 
-    <!-- ===================================================================== -->
-    <!-- TAB 3: DOWNLOAD MONITORING                                            -->
-    <!-- ===================================================================== -->
+    <!-- TAB 5: DOWNLOADS & FILE ACTIVITY -->
     <div id="tab-downloads" class="tab-pane">
-
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">⬇️ Monitored Downloads & Security Scans</span>
-          <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="fetchDownloads()">Refresh</button>
+      <section class="list-card">
+        <div class="list-header">
+          <div class="list-title">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>Recent Downloads & File Scans</span>
+          </div>
+          <button class="btn btn-secondary" onclick="fetchDownloads()">
+            <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            <span>Refresh</span>
+          </button>
         </div>
 
-        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
-          Automatically intercepts new files downloaded on the laptop. Scans each file using PE static analysis, YARA rules, Shannon entropy, and hash reputation without transmitting private file contents.
+        <div id="downloads-container">
+          <div class="empty-placeholder">
+            <span>No incoming downloads recorded.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="list-card" style="margin-top:20px;">
+        <div class="list-header">
+          <div class="list-title">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span>Authorized File System Activity</span>
+          </div>
+        </div>
+
+        <div id="files-container">
+          <div class="empty-placeholder">
+            <span>No authorized file changes recorded.</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- TAB 6: QUARANTINE VAULT -->
+    <div id="tab-quarantine" class="tab-pane">
+      <section class="list-card">
+        <div class="list-header">
+          <div class="list-title">
+            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span>Quarantine Isolation Vault</span>
+          </div>
+          <button class="btn btn-secondary" onclick="fetchQuarantine()">
+            <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            <span>Refresh Vault</span>
+          </button>
+        </div>
+
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:14px;">
+          Suspicious files automatically isolated with encrypted headers and stripped execution rights. Reversible at any time.
         </p>
 
-        <div id="downloads-feed-list" class="item-list">
-          <div style="text-align: center; color: var(--text-muted); padding: 25px;">No recent downloads recorded. Monitored path: %USERPROFILE%\\Downloads</div>
+        <div id="quarantine-container">
+          <div class="empty-placeholder">
+            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span>Quarantine vault is empty. No files isolated.</span>
+          </div>
         </div>
-      </div>
-
+      </section>
     </div>
 
-    <!-- ===================================================================== -->
-    <!-- TAB 4: FILE & FOLDER ACTIVITY                                         -->
-    <!-- ===================================================================== -->
-    <div id="tab-files" class="tab-pane">
-
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">📁 File & Folder Modification Sentinel</span>
-          <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="fetchFiles()">Refresh</button>
+    <!-- TAB 7: PAIRING & SECURITY CONTROLS (Requirements 3 & 4) -->
+    <div id="tab-settings" class="tab-pane">
+      <!-- Device Pairing Card -->
+      <section class="pairing-card">
+        <div class="pairing-header">
+          <div class="pairing-title">
+            <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            <span>Token-Based Device Pairing</span>
+          </div>
+          <span class="badge badge-INFO" id="pairing-mode-badge">Laptop → Phone</span>
         </div>
 
-        <!-- Filter Chips -->
-        <div class="item-chips" style="margin-bottom: 14px;">
-          <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="filterFiles('ALL')">All Changes</button>
-          <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="filterFiles('CREATED')">Created</button>
-          <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="filterFiles('MODIFIED')">Modified</button>
-          <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="filterFiles('DELETED')">Deleted</button>
-          <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="filterFiles('MOVED')">Moved / Renamed</button>
-          <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="filterFiles('FOLDER')">Folders</button>
+        <!-- Unpaired State: Shows Laptop Token for entering on phone -->
+        <div id="unpaired-token-view">
+          <p style="font-size:13px; color:var(--text-secondary);">
+            Open the DefenceIQ Android app on your mobile phone and enter this unique pairing code to securely pair devices:
+          </p>
+
+          <div class="token-display-box">
+            <div>
+              <div class="token-code" id="laptop-pairing-token-val">DIQ-XXXX-XXXX</div>
+              <div class="token-expiry-label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span id="token-expiry-countdown">Valid for 10 minutes</span>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-primary" onclick="copyPairingToken()">
+                <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                <span>Copy Code</span>
+              </button>
+              <button class="btn btn-secondary" onclick="generateFreshToken()">
+                <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                <span>Regenerate</span>
+              </button>
+            </div>
+          </div>
+
+          <div style="margin-top:16px; padding:12px; background:var(--bg-subtle); border-radius:8px; border:1px solid var(--border-main);">
+            <div style="font-weight:600; font-size:13px; color:var(--text-main); margin-bottom:6px;">Reverse Pairing (Phone → Laptop)</div>
+            <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">
+              Generated a code on your mobile phone? Enter the phone's pairing code below to connect:
+            </p>
+            <div style="display:flex; gap:8px;">
+              <input type="text" id="reverse-mobile-token-input" placeholder="e.g. DIQ-7K9P-4X2M" style="max-width:240px;">
+              <button class="btn btn-secondary" onclick="submitReverseMobileToken()">Pair from Phone Code</button>
+            </div>
+          </div>
         </div>
 
-        <!-- Mass File Change Status Widget -->
-        <div id="mass-change-widget" style="display: none; background: rgba(255, 145, 0, 0.12); border: 1px solid var(--accent-orange); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-size: 13px; color: #ffcc80;">
-          ⚠️ <strong>Rapid File Activity Detected:</strong> <span id="mc-count">0</span> modifications recorded in sliding 5-second window.
+        <!-- Paired State: Token is hidden, device info displayed (Requirement 3) -->
+        <div id="paired-token-view" style="display:none;">
+          <div class="paired-state-box">
+            <div class="paired-info">
+              <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <div>
+                <div style="font-weight:700; font-size:14px; color:#065f46;" id="paired-dev-title">Securely Paired with Mobile Companion</div>
+                <div style="font-size:12px; color:#047857;" id="paired-dev-meta">Device: Android Phone • Session Active</div>
+              </div>
+            </div>
+
+            <button class="btn btn-danger" onclick="revokePairingAction()">
+              <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <span>Revoke & Unpair</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Protection Level Controls -->
+      <section class="list-card">
+        <div class="list-header">
+          <div class="list-title">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            <span>Agent Protection Mode</span>
+          </div>
         </div>
 
-        <div id="files-feed-list" class="item-list">
-          <div style="text-align: center; color: var(--text-muted); padding: 25px;">Listening for filesystem events in authorized directories...</div>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+          <button class="btn btn-secondary" id="btn-mode-basic" onclick="setProtectionMode('basic')">
+            <span>Basic (Monitor Only)</span>
+          </button>
+          <button class="btn btn-primary" id="btn-mode-balanced" onclick="setProtectionMode('balanced')">
+            <span>Balanced (Auto-Suspend Red)</span>
+          </button>
+          <button class="btn btn-secondary" id="btn-mode-maximum" onclick="setProtectionMode('maximum')">
+            <span>Maximum (Isolate Red & Orange)</span>
+          </button>
         </div>
-      </div>
+      </section>
 
+      <!-- Companion APK Download Card -->
+      <section class="list-card">
+        <div class="list-header">
+          <div class="list-title">
+            <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+            <span>Android Companion APK</span>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <div>
+            <div style="font-weight:600; font-size:14px;">DefenceIQ Android Companion Application</div>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Direct download APK to install on your Android device.</div>
+          </div>
+          <a href="/download-apk" class="btn btn-primary" download style="text-decoration:none;">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>Download APK</span>
+          </a>
+        </div>
+      </section>
     </div>
 
-    <!-- ===================================================================== -->
-    <!-- TAB 5: SECURITY ALERTS & THREAT CENTER                                 -->
-    <!-- ===================================================================== -->
-    <div id="tab-alerts" class="tab-pane">
+  </main>
 
-      <!-- Severity Counters -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">🚨 Threat Level & Severity Breakdown</span>
-          <span id="alerts-status-tag" class="badge badge-CLEAN">SECURE</span>
-        </div>
-
-        <div class="sev-grid">
-          <div class="sev-pill" style="border-color: rgba(255, 23, 68, 0.4);">
-            <div class="sev-count" style="color: var(--accent-red);" id="sc-critical">0</div>
-            <div class="sev-name">Critical</div>
-          </div>
-          <div class="sev-pill" style="border-color: rgba(255, 145, 0, 0.4);">
-            <div class="sev-count" style="color: var(--accent-orange);" id="sc-high">0</div>
-            <div class="sev-name">High</div>
-          </div>
-          <div class="sev-pill" style="border-color: rgba(255, 214, 0, 0.4);">
-            <div class="sev-count" style="color: var(--accent-yellow);" id="sc-medium">0</div>
-            <div class="sev-name">Medium</div>
-          </div>
-          <div class="sev-pill" style="border-color: rgba(0, 255, 136, 0.4);">
-            <div class="sev-count" style="color: var(--accent-green);" id="sc-low">0</div>
-            <div class="sev-name">Low</div>
-          </div>
-          <div class="sev-pill" style="border-color: rgba(0, 229, 255, 0.4);">
-            <div class="sev-count" style="color: var(--accent-cyan);" id="sc-info">0</div>
-            <div class="sev-name">Info</div>
-          </div>
-        </div>
-
-        <!-- Simulation Test Bar -->
-        <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08);">
-          <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">
-            🧪 Test Defensive Simulations (Verify Push Notifications & Red Alerts):
-          </div>
-          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <button class="btn btn-danger" onclick="triggerSimulation('mass_file_modification')">🔴 Simulate Mass File Modification (Red Alert)</button>
-            <button class="btn btn-danger" onclick="triggerSimulation('suspicious_script')">⚡ Simulate Suspicious Script</button>
-            <button class="btn btn-secondary" onclick="triggerSimulation('miner')">⛏️ Simulate Miner Behavior</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Real-Time Alerts Feed -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">📜 Incidents & Audit History</span>
-          <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="fetchIncidents()">Refresh</button>
-        </div>
-
-        <div id="incidents-container" class="item-list">
-          <div style="text-align: center; color: var(--text-muted); padding: 30px;">
-            No incidents detected. Endpoint telemetry normal.
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- ===================================================================== -->
-    <!-- TAB 6: SCOPE & PRIVACY SETTINGS                                       -->
-    <!-- ===================================================================== -->
-    <div id="tab-scope" class="tab-pane">
-
-      <!-- Monitored Scope -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">📁 User-Authorized Monitoring Scope</span>
-          <span class="badge badge-CLEAN">LEAST PRIVILEGE</span>
-        </div>
-
-        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
-          The DefenceIQ agent only monitors locations and processes explicitly authorized by you:
-        </p>
-
-        <div id="authorized-paths-container" class="item-list" style="margin-bottom: 16px;">
-          <div class="item-card"><span class="item-name">%USERPROFILE%\\Downloads</span></div>
-          <div class="item-card"><span class="item-name">%USERPROFILE%\\Documents</span></div>
-          <div class="item-card"><span class="item-name">%USERPROFILE%\\Desktop</span></div>
-        </div>
-
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <input type="text" id="add-path-input" placeholder="Enter directory path to monitor (e.g. C:\\Projects)">
-          <button class="btn btn-primary" onclick="addMonitoredPath()">Add Directory</button>
-        </div>
-      </div>
-
-      <!-- Protection Level Settings -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">🛡️ Protection Policy Level</span>
-        </div>
-
-        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px;">
-          <button class="btn btn-secondary" id="lvl-btn-basic" onclick="setProtectionLevel('basic')">Basic (Log Only)</button>
-          <button class="btn btn-primary" id="lvl-btn-balanced" onclick="setProtectionLevel('balanced')">Balanced (Contain Suspicious)</button>
-          <button class="btn btn-secondary" id="lvl-btn-maximum" onclick="setProtectionLevel('maximum')">Maximum (Strict Isolation)</button>
-        </div>
-
-        <div class="privacy-box">
-          <strong>Privacy Declaration (Strict Non-Surveillance):</strong><br>
-          • <strong>Zero Keystroke / Password Logging:</strong> Form fields, credentials, and keystrokes are never recorded.<br>
-          • <strong>Zero Webcam / Mic Access:</strong> Hardware sensors are never activated.<br>
-          • <strong>No File Content Transmission:</strong> Files stay 100% on the laptop; only cryptographic hashes, entropy values, and metadata are shared with the mobile companion.
-        </div>
-      </div>
-
-    </div>
-
-  </div>
-
-  <!-- Pairing Modal Sheet -->
+  <!-- Reverse Pairing Modal (Phone -> Laptop) -->
   <div id="pairing-modal" class="modal-backdrop">
     <div class="modal-dialog">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span class="card-title">🔗 Device Pairing & Key Management</span>
-        <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px;" onclick="hideModal('pairing-modal')">✕</button>
+      <div class="modal-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary-blue)" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        <span>Pair Mobile Device</span>
       </div>
 
-      <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
-        Pair your laptop with the DefenceIQ Companion App using a cryptographically random token.
-        <strong>No IP address, port forwarding, or local Wi-Fi required</strong>.
+      <p style="font-size:13px; color:var(--text-secondary);">
+        Enter the pairing code generated by your mobile companion app:
       </p>
 
-      <div style="display: flex; flex-direction: column; gap: 8px;">
-        <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted);">Current Token</label>
-        <input type="text" id="modal-token-input" placeholder="DIQ-XXXX-XXXX">
-      </div>
+      <input type="text" id="modal-token-input" placeholder="e.g. DIQ-8K2A-9X1B">
 
-      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <button class="btn btn-primary" onclick="submitModalToken()">Save & Pair</button>
-        <button class="btn btn-secondary" onclick="generateNewMobileToken()">Generate Token</button>
-        <button class="btn btn-secondary" onclick="rotateTokenAction()">Rotate Key</button>
-        <button class="btn btn-danger" onclick="revokePairingAction()">Revoke / Unpair</button>
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
+        <button class="btn btn-secondary" onclick="hideModal('pairing-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="submitModalToken()">Verify & Pair</button>
       </div>
     </div>
+  </div>
+
+  <!-- Toast notification -->
+  <div id="toast-msg">
+    <span id="toast-text">Message</span>
   </div>
 
   <script>
-    // State
-    let currentToken = localStorage.getItem("defenceiq_pairing_token") || "DIQ-2TFM-UZNF";
-    let ws = null;
-    let pollTimer = null;
-    let durationTimer = null;
-    let activeDurationSeconds = 0;
-    let allFileActivities = [];
+    // ── Global State ─────────────────────────────────────────────
+    let currentToken = "";
     let lastSeenEpoch = Date.now();
-    let currentRedAlert = null;
+    let pollInterval = null;
+    let ws = null;
+    let tokenCountdownTimer = null;
+    let activeIncidentId = null;
 
-    // Check URL parameters for ?token=XXXX
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get("token")) {
-      currentToken = urlParams.get("token").toUpperCase();
-      localStorage.setItem("defenceiq_pairing_token", currentToken);
-    }
-
+    // ── Tab Navigation ───────────────────────────────────────────
     function switchTab(tabId) {
-      document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
-      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-      
-      const target = document.getElementById(tabId);
-      if (target) target.classList.add("active");
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
 
-      // Highlight button
-      const buttons = document.querySelectorAll(".tab-btn");
-      buttons.forEach(btn => {
-        if (btn.getAttribute("onclick") && btn.getAttribute("onclick").includes(tabId)) {
-          btn.classList.add("active");
-        }
+      const targetPane = document.getElementById(tabId);
+      const targetBtn = document.getElementById('btn-' + tabId);
+      if (targetPane) targetPane.classList.add('active');
+      if (targetBtn) targetBtn.classList.add('active');
+
+      if (tabId === 'tab-security-alerts') fetchSecurityAlerts();
+      if (tabId === 'tab-incidents') fetchIncidents();
+      if (tabId === 'tab-windows') fetchWindows();
+      if (tabId === 'tab-downloads') { fetchDownloads(); fetchFiles(); }
+      if (tabId === 'tab-quarantine') fetchQuarantine();
+      if (tabId === 'tab-settings') fetchPairingStatus();
+    }
+
+    // ── Toast Helper ─────────────────────────────────────────────
+    function showToast(text, isError = false) {
+      const toast = document.getElementById('toast-msg');
+      const toastTxt = document.getElementById('toast-text');
+      toastTxt.innerText = text;
+      toast.style.background = isError ? "#b91c1c" : "#0f172a";
+      toast.style.display = "flex";
+      setTimeout(() => { toast.style.display = "none"; }, 3500);
+    }
+
+    function showModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function hideModal(id) { document.getElementById(id).style.display = 'none'; }
+    function showPairingModal() {
+      document.getElementById('modal-token-input').value = "";
+      showModal('pairing-modal');
+    }
+
+    // ── Copy Token ───────────────────────────────────────────────
+    function copyPairingToken() {
+      const code = document.getElementById('laptop-pairing-token-val').innerText.trim();
+      navigator.clipboard.writeText(code).then(() => {
+        showToast("Pairing code copied to clipboard!");
+      }).catch(() => {
+        showToast("Copied: " + code);
       });
-
-      // Lazy load tab data
-      if (tabId === "tab-windows") fetchWindows();
-      if (tabId === "tab-downloads") fetchDownloads();
-      if (tabId === "tab-files") fetchFiles();
-      if (tabId === "tab-alerts") fetchIncidents();
     }
 
-    function showModal(id) {
-      document.getElementById(id).style.display = "flex";
-      if (id === "pairing-modal") {
-        document.getElementById("modal-token-input").value = currentToken;
+    // ── Reverse Mobile Token Pairing (Phone -> Laptop) ────────────
+    async function submitReverseMobileToken() {
+      const input = document.getElementById('reverse-mobile-token-input').value.trim().toUpperCase();
+      if (!input || input.length < 4) {
+        showToast("Please enter a valid pairing code (e.g. DIQ-XXXX-XXXX)", true);
+        return;
       }
-    }
-
-    function hideModal(id) {
-      document.getElementById(id).style.display = "none";
-    }
-
-    function generateNewMobileToken() {
-      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-      let p1 = "", p2 = "";
-      for (let i = 0; i < 4; i++) p1 += chars.charAt(Math.floor(Math.random() * chars.length));
-      for (let i = 0; i < 4; i++) p2 += chars.charAt(Math.floor(Math.random() * chars.length));
-      document.getElementById("modal-token-input").value = "DIQ-" + p1 + "-" + p2;
+      await performPairingWithToken(input);
     }
 
     async function submitModalToken() {
-      const val = document.getElementById("modal-token-input").value.trim().toUpperCase();
-      if (!val || val.length < 4) {
-        alert("Please enter a valid token (at least 4 characters).");
+      const input = document.getElementById('modal-token-input').value.trim().toUpperCase();
+      if (!input || input.length < 4) {
+        showToast("Please enter a valid pairing code (e.g. DIQ-XXXX-XXXX)", true);
         return;
       }
+      hideModal('pairing-modal');
+      await performPairingWithToken(input);
+    }
+
+    async function performPairingWithToken(tok) {
       try {
         const res = await fetch("/pair-mobile", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token: val })
+          body: JSON.stringify({ token: tok, device_name: "Mobile Companion", device_type: "mobile" })
         });
         const data = await res.json();
-        if (data.success) {
-          currentToken = val;
-          localStorage.setItem("defenceiq_pairing_token", currentToken);
-          document.getElementById("token-text").innerText = currentToken;
-          hideModal("pairing-modal");
-          init();
+        if (res.ok && data.success) {
+          currentToken = tok;
+          localStorage.setItem("defenceiq_token", currentToken);
+          showToast("Successfully paired with mobile device!");
+          fetchPairingStatus();
+          fetchStatus();
         } else {
-          alert("Pairing failed: " + (data.detail || "Error"));
+          showToast(data.detail || "Pairing failed. Please verify the code.", true);
         }
       } catch (e) {
-        // In relay mode or offline, save locally
-        currentToken = val;
-        localStorage.setItem("defenceiq_pairing_token", currentToken);
-        document.getElementById("token-text").innerText = currentToken;
-        hideModal("pairing-modal");
-        init();
+        showToast("Connection error during pairing: " + e.message, true);
       }
     }
 
-    async function rotateTokenAction() {
-      if (!confirm("Rotate pairing secrets? Existing paired sessions will need to re-pair with the new token.")) return;
+    // ── Generate Fresh Token ─────────────────────────────────────
+    async function generateFreshToken() {
       try {
-        const res = await fetch("/rotate-token?token=" + encodeURIComponent(currentToken), { method: "POST" });
+        const res = await fetch("/token/generate", { method: "POST" });
         const data = await res.json();
-        if (data.success && data.new_token) {
-          currentToken = data.new_token;
-          localStorage.setItem("defenceiq_pairing_token", currentToken);
-          document.getElementById("token-text").innerText = currentToken;
-          alert("Token rotated successfully. New Token: " + currentToken);
-          hideModal("pairing-modal");
-          init();
+        if (data.success && data.token) {
+          currentToken = data.token;
+          localStorage.setItem("defenceiq_token", currentToken);
+          document.getElementById('laptop-pairing-token-val').innerText = currentToken;
+          document.getElementById('header-token-text').innerText = currentToken;
+          showToast("Generated fresh pairing code.");
+          startTokenTimer(600);
         }
       } catch (e) {
-        alert("Error rotating token: " + e.message);
+        showToast("Error generating token: " + e.message, true);
       }
     }
 
+    // ── Revoke Pairing ───────────────────────────────────────────
     async function revokePairingAction() {
-      if (!confirm("Revoke pairing and unpair all devices?")) return;
+      if (!confirm("Revoke pairing and unpair all connected devices?")) return;
       try {
         const res = await fetch("/revoke-pairing", { method: "POST" });
         const data = await res.json();
         if (data.success) {
           currentToken = data.new_token || "";
-          localStorage.setItem("defenceiq_pairing_token", currentToken);
-          document.getElementById("token-text").innerText = currentToken;
-          hideModal("pairing-modal");
-          alert("Pairing revoked.");
-          init();
+          localStorage.setItem("defenceiq_token", currentToken);
+          showToast("Pairing revoked and secrets rotated.");
+          fetchPairingStatus();
+          fetchStatus();
         }
       } catch (e) {
-        alert("Error revoking pairing: " + e.message);
+        showToast("Error revoking pairing: " + e.message, true);
       }
     }
 
-    // --- Data Fetching & Polling ---
-    async function fetchStatus() {
+    // ── Protection Mode ──────────────────────────────────────────
+    async function setProtectionMode(level) {
       try {
-        const res = await fetch("/status?token=" + encodeURIComponent(currentToken));
+        const res = await fetch("/protection/level?token=" + encodeURIComponent(currentToken), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ level: level })
+        });
+        if (res.ok) {
+          showToast("Protection mode updated to " + level.toUpperCase());
+          updateModeButtons(level);
+        }
+      } catch (e) {
+        showToast("Error updating protection mode: " + e.message, true);
+      }
+    }
+
+    function updateModeButtons(level) {
+      ['basic', 'balanced', 'maximum'].forEach(m => {
+        const btn = document.getElementById('btn-mode-' + m);
+        if (btn) {
+          btn.className = (m === level.toLowerCase()) ? "btn btn-primary" : "btn btn-secondary";
+        }
+      });
+    }
+
+    // ── Token Countdown Timer ────────────────────────────────────
+    function startTokenTimer(secondsLeft) {
+      if (tokenCountdownTimer) clearInterval(tokenCountdownTimer);
+      let s = secondsLeft;
+      const el = document.getElementById('token-expiry-countdown');
+      tokenCountdownTimer = setInterval(() => {
+        if (s <= 0) {
+          clearInterval(tokenCountdownTimer);
+          el.innerText = "Token expired. Click Regenerate.";
+          el.style.color = "var(--danger-red)";
+        } else {
+          const m = Math.floor(s / 60);
+          const rem = s % 60;
+          el.innerText = `Valid for ${m}m ${rem < 10 ? '0' : ''}${rem}s`;
+          el.style.color = "var(--text-muted)";
+          s--;
+        }
+      }, 1000);
+    }
+
+    // ── Pairing Status Fetcher ───────────────────────────────────
+    async function fetchPairingStatus() {
+      try {
+        const res = await fetch("/pairing/status");
+        if (!res.ok) return;
+        const data = await res.json();
+
+        const unpairedView = document.getElementById('unpaired-token-view');
+        const pairedView = document.getElementById('paired-token-view');
+        const headerTokenText = document.getElementById('header-token-text');
+        const cardConn = document.getElementById('card-connection-status');
+        const cardMobile = document.getElementById('card-paired-mobile');
+        const modeBadge = document.getElementById('pairing-mode-badge');
+
+        if (data.is_paired && data.paired_device) {
+          unpairedView.style.display = 'none';
+          pairedView.style.display = 'block';
+          modeBadge.innerText = "Paired";
+          modeBadge.className = "badge badge-LOW";
+          headerTokenText.innerText = "Paired: " + (data.paired_device.device_name || "Phone");
+          cardMobile.innerText = data.paired_device.device_name + " (Paired)";
+          document.getElementById('paired-dev-title').innerText = "Paired with " + data.paired_device.device_name;
+          document.getElementById('paired-dev-meta').innerText = `Device Type: ${data.paired_device.device_type || 'Mobile'} • Paired at ${data.paired_device.paired_at ? new Date(data.paired_device.paired_at).toLocaleTimeString() : 'Recently'}`;
+        } else {
+          unpairedView.style.display = 'block';
+          pairedView.style.display = 'none';
+          modeBadge.innerText = "Awaiting Pairing";
+          modeBadge.className = "badge badge-INFO";
+          cardMobile.innerText = "Awaiting Mobile Companion";
+
+          if (data.active_token && data.active_token.token) {
+            currentToken = data.active_token.token;
+            localStorage.setItem("defenceiq_token", currentToken);
+            document.getElementById('laptop-pairing-token-val').innerText = currentToken;
+            headerTokenText.innerText = currentToken;
+            startTokenTimer(data.active_token.ttl_seconds_remaining || 600);
+          }
+        }
+
+        // Live connection badge
+        updateConnectionBadge(data.connection_status || "Connected");
+      } catch (e) {
+        console.debug("fetchPairingStatus note:", e);
+      }
+    }
+
+    // ── Update Connection Badge (Requirement 1) ──────────────────
+    function updateConnectionBadge(statusStr) {
+      const pill = document.getElementById('device-status-pill');
+      const dot = document.getElementById('status-dot');
+      const txt = document.getElementById('status-text');
+      const cardConn = document.getElementById('card-connection-status');
+
+      txt.innerText = statusStr;
+      if (cardConn) cardConn.innerText = statusStr;
+
+      const norm = (statusStr || "").toLowerCase().replace(/\\s+/g, '-');
+      pill.className = "status-pill " + norm;
+
+      if (norm.includes("connected") && !norm.includes("lost")) {
+        dot.className = "pulse-dot pulse-green";
+        if (cardConn) cardConn.style.color = "var(--success-green)";
+      } else if (norm.includes("connecting")) {
+        dot.className = "pulse-dot pulse-blue";
+        if (cardConn) cardConn.style.color = "var(--primary-blue)";
+      } else if (norm.includes("connection-lost")) {
+        dot.className = "pulse-dot pulse-amber";
+        if (cardConn) cardConn.style.color = "var(--warning-amber)";
+      } else if (norm.includes("offline")) {
+        dot.className = "pulse-dot pulse-red";
+        if (cardConn) cardConn.style.color = "var(--danger-red)";
+      } else {
+        dot.className = "pulse-dot pulse-gray";
+        if (cardConn) cardConn.style.color = "var(--text-secondary)";
+      }
+    }
+
+    // ── Fetch Status & Telemetry ─────────────────────────────────
+    async function fetchStatus(isManual = false) {
+      try {
+        const res = await fetch("/device/status?token=" + encodeURIComponent(currentToken));
         if (res.ok) {
           const data = await res.json();
           lastSeenEpoch = Date.now();
-          renderStatus(data);
+          renderDeviceMetrics(data);
+          if (isManual) showToast("Telemetry refreshed.");
         } else {
-          checkOfflineState();
+          checkOfflineFallback();
         }
       } catch (e) {
-        checkOfflineState();
+        checkOfflineFallback();
       }
     }
 
-    function checkOfflineState() {
+    function checkOfflineFallback() {
       const elapsed = Math.round((Date.now() - lastSeenEpoch) / 1000);
-      const pill = document.getElementById("device-status-pill");
-      const dot = document.getElementById("status-dot");
-      const txt = document.getElementById("status-text");
-      const ticker = document.getElementById("last-seen-ticker");
-
       if (elapsed > 15) {
-        pill.className = "status-pill offline";
-        dot.className = "pulse-dot pulse-amber";
-        txt.innerText = "OFFLINE";
-        ticker.innerText = `Offline (Last seen ${elapsed}s ago)`;
-        ticker.style.color = "var(--text-muted)";
+        updateConnectionBadge("Laptop Offline");
+        document.getElementById('card-last-seen').innerText = `${elapsed}s ago (Offline)`;
       }
     }
 
-    function renderStatus(data) {
-      document.getElementById("dev-host").innerText = data.hostname || "Laptop";
-      document.getElementById("dev-id").innerText = data.device_id || ("LAPTOP-" + (data.hostname ? data.hostname.substring(0, 8).toUpperCase() : "SECURE"));
-      document.getElementById("btn-threat-count").innerText = (data.stats ? data.stats.total_incidents : 0) || 0;
-
-      // Online status
-      const state = data.online_status || "ONLINE";
-      const pill = document.getElementById("device-status-pill");
-      const dot = document.getElementById("status-dot");
-      const txt = document.getElementById("status-text");
-      const ticker = document.getElementById("last-seen-ticker");
-
-      pill.className = "status-pill " + state.toLowerCase();
-      txt.innerText = state;
-      ticker.innerText = "Updated Just Now";
-      ticker.style.color = "var(--accent-green)";
-
-      if (state === "ONLINE") {
-        dot.className = "pulse-dot pulse-green";
-      } else if (state === "SLEEP") {
-        dot.className = "pulse-dot pulse-amber";
-        ticker.innerText = "Laptop in Sleep / Hibernation";
-      } else if (state === "SHUTDOWN") {
-        dot.className = "pulse-dot pulse-red";
-        ticker.innerText = "Laptop Shut Down";
+    function renderDeviceMetrics(data) {
+      document.getElementById('dev-host').innerText = data.hostname || "Security Endpoint";
+      document.getElementById('dev-id').innerText = data.device_id || "LAPTOP-ENDPOINT";
+      if (data.network_status && data.network_status.lan_ip) {
+        document.getElementById('card-lan-ip').innerText = `${data.network_status.lan_ip}:${data.network_status.port || 8765}`;
       }
 
-      // Gauges
-      if (data.system_metrics) {
-        const sm = data.system_metrics;
+      document.getElementById('card-last-seen').innerText = "Just now";
+
+      if (data.connection_status) {
+        updateConnectionBadge(data.connection_status);
+      }
+
+      if (data.protection_level) {
+        updateModeButtons(data.protection_level);
+      }
+
+      const sm = data.system_metrics;
+      if (sm) {
         const cpu = sm.cpu_percent || 0;
-        const ram = sm.ram ? sm.ram.percent : 0;
-        const disk = sm.disk ? sm.disk.percent : 0;
-        const batt = sm.battery && sm.battery.percent !== null ? sm.battery.percent : 100;
+        document.getElementById('gauge-cpu-val').innerText = cpu + "%";
+        document.getElementById('gauge-cpu-fill').style.width = Math.min(cpu, 100) + "%";
+        document.getElementById('sub-cpu-cores').innerText = `${sm.cpu_cores_physical || 4} Cores / ${sm.cpu_cores_logical || 8} Threads`;
+        document.getElementById('sub-cpu-freq').innerText = `${sm.cpu_freq_mhz || 2400} MHz`;
 
-        document.getElementById("gauge-cpu-val").innerText = cpu + "%";
-        document.getElementById("gauge-cpu-fill").style.width = Math.min(cpu, 100) + "%";
-
-        document.getElementById("gauge-ram-val").innerText = ram + "%";
-        document.getElementById("gauge-ram-fill").style.width = Math.min(ram, 100) + "%";
-
-        document.getElementById("gauge-disk-val").innerText = disk + "%";
-        document.getElementById("gauge-disk-fill").style.width = Math.min(disk, 100) + "%";
-
-        document.getElementById("gauge-batt-val").innerText = batt + "%" + (sm.battery && sm.battery.plugged ? " ⚡" : "");
-        document.getElementById("gauge-batt-fill").style.width = Math.min(batt, 100) + "%";
-      }
-
-      // Health state
-      const hState = data.health_state || "SECURE";
-      const hCircle = document.getElementById("health-circle");
-      const hTitle = document.getElementById("health-title");
-      const hDesc = document.getElementById("health-desc");
-
-      if (hState === "CRITICAL_THREAT") {
-        hCircle.style.borderColor = "var(--accent-red)";
-        hCircle.style.boxShadow = "var(--red-glow)";
-        hCircle.innerText = "🚨";
-        hTitle.innerText = "CRITICAL THREAT DETECTED";
-        hTitle.style.color = "var(--accent-red)";
-        hDesc.innerText = "Automated process containment or high-risk anomaly active.";
-      } else if (hState === "ELEVATED_RISK") {
-        hCircle.style.borderColor = "var(--accent-orange)";
-        hCircle.style.boxShadow = "0 0 25px rgba(255, 145, 0, 0.35)";
-        hCircle.innerText = "⚠️";
-        hTitle.innerText = "ELEVATED RISK";
-        hTitle.style.color = "var(--accent-orange)";
-        hDesc.innerText = "Multiple suspicious behavioral signals correlated on host.";
-      } else {
-        hCircle.style.borderColor = "var(--accent-green)";
-        hCircle.style.boxShadow = "0 0 30px rgba(0, 255, 136, 0.25)";
-        hCircle.innerText = "🛡️";
-        hTitle.innerText = "SYSTEM SECURE";
-        hTitle.style.color = "var(--accent-green)";
-        hDesc.innerText = "All personal endpoint monitors active. Telemetry nominal.";
-      }
-
-      // Active Window glance
-      if (data.active_window) {
-        updateActiveWindowGlance(data.active_window);
-      }
-
-      // Severity counts
-      if (data.severity_counts) {
-        const sc = data.severity_counts;
-        document.getElementById("sc-critical").innerText = sc.CRITICAL || 0;
-        document.getElementById("sc-high").innerText = sc.HIGH || 0;
-        document.getElementById("sc-medium").innerText = sc.MEDIUM || 0;
-        document.getElementById("sc-low").innerText = sc.LOW || 0;
-        document.getElementById("sc-info").innerText = sc.INFORMATION || 0;
-      }
-    }
-
-    function updateActiveWindowGlance(act) {
-      if (!act) return;
-      document.getElementById("ov-app-name").innerText = act.app_name || act.process_name || "Active App";
-      document.getElementById("ov-tab-title").innerText = act.tab_title || act.window_title || "--";
-      activeDurationSeconds = act.duration_seconds || 0;
-      document.getElementById("ov-duration").innerText = formatDuration(activeDurationSeconds);
-
-      const dBadge = document.getElementById("ov-domain-badge");
-      if (act.domain) {
-        dBadge.style.display = "inline-block";
-        dBadge.innerText = act.domain;
-      } else {
-        dBadge.style.display = "none";
-      }
-
-      // Detailed tab
-      document.getElementById("win-app-name").innerText = act.app_name || act.process_name || "Unknown";
-      document.getElementById("win-proc-pid").innerText = "PID " + (act.pid || "--");
-      document.getElementById("win-browser-name").innerText = act.browser_name || (act.is_browser ? "Browser" : "Desktop Application");
-      document.getElementById("win-tab-title").innerText = act.tab_title || act.window_title || "--";
-      document.getElementById("win-duration-text").innerText = formatDuration(activeDurationSeconds);
-      document.getElementById("win-start-time").innerText = act.start_time ? new Date(act.start_time).toLocaleTimeString() : "--";
-
-      const wDomain = document.getElementById("win-domain-chip");
-      if (act.domain) {
-        wDomain.style.display = "inline-block";
-        wDomain.innerText = "🌐 Domain: " + act.domain;
-      } else {
-        wDomain.style.display = "none";
-      }
-    }
-
-    function formatDuration(sec) {
-      if (sec < 60) return sec + "s";
-      const m = Math.floor(sec / 60);
-      const s = sec % 60;
-      return m + "m " + s + "s";
-    }
-
-    // --- Windows & Tabs History ---
-    async function fetchWindows() {
-      try {
-        const res = await fetch("/activities/windows?token=" + encodeURIComponent(currentToken));
-        if (res.ok) {
-          const data = await res.json();
-          if (data.current_activity) updateActiveWindowGlance(data.current_activity);
-          renderWindowsHistory(data.recent_activities || []);
+        if (sm.ram) {
+          const ramP = sm.ram.percent || 0;
+          document.getElementById('gauge-ram-val').innerText = ramP + "%";
+          document.getElementById('gauge-ram-fill').style.width = Math.min(ramP, 100) + "%";
+          document.getElementById('sub-ram-used').innerText = `${sm.ram.used_gb || 0} GB Used`;
+          document.getElementById('sub-ram-total').innerText = `${sm.ram.total_gb || 16} GB Total`;
         }
-      } catch (e) {}
-    }
 
-    function renderWindowsHistory(activities) {
-      const container = document.getElementById("windows-history-list");
-      if (!activities || activities.length === 0) {
-        container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 20px;">No window activity logged yet.</div>`;
-        return;
-      }
-
-      container.innerHTML = activities.map(a => `
-        <div class="item-card">
-          <div class="item-card-top">
-            <span class="item-name">${a.app_name} (${a.process_name})</span>
-            <span class="chip">${formatDuration(a.duration_seconds || 0)}</span>
-          </div>
-          <div style="font-size: 13px; color: #cbd5e1;">${a.tab_title || a.window_title || '--'}</div>
-          <div class="item-meta">
-            ${a.domain ? `<span class="chip" style="color: var(--accent-yellow);">🌐 ${a.domain}</span>` : ""}
-            <span>PID: ${a.pid}</span>
-            <span>Started: ${a.start_time ? new Date(a.start_time).toLocaleTimeString() : '--'}</span>
-          </div>
-        </div>
-      `).join("");
-    }
-
-    // --- Downloads Monitoring ---
-    async function fetchDownloads() {
-      try {
-        const res = await fetch("/activities/downloads?limit=30&token=" + encodeURIComponent(currentToken));
-        if (res.ok) {
-          const data = await res.json();
-          renderDownloads(data.downloads || []);
+        if (sm.disk) {
+          const diskP = sm.disk.percent || 0;
+          document.getElementById('gauge-disk-val').innerText = diskP + "%";
+          document.getElementById('gauge-disk-fill').style.width = Math.min(diskP, 100) + "%";
+          document.getElementById('sub-disk-free').innerText = `${sm.disk.free_gb || 0} GB Free`;
+          document.getElementById('sub-disk-total').innerText = `${sm.disk.total_gb || 512} GB Total`;
         }
-      } catch (e) {}
-    }
 
-    function renderDownloads(downloads) {
-      const container = document.getElementById("downloads-feed-list");
-      if (!downloads || downloads.length === 0) {
-        container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 25px;">No recent downloads recorded in %USERPROFILE%\\Downloads</div>`;
-        return;
-      }
-
-      container.innerHTML = downloads.map(dl => {
-        const v = dl.scan_verdict || "CLEAN";
-        const vBadge = `<span class="badge badge-${v}">${v}</span>`;
-        const sigs = (dl.risk_signals || []).map(s => `<span class="chip">${s}</span>`).join("");
-
-        return `
-          <div class="item-card">
-            <div class="item-card-top">
-              <span class="item-name">📥 ${dl.file_name}</span>
-              ${vBadge}
-            </div>
-            <div class="item-meta">
-              <span>Type: ${dl.file_type || 'File'}</span>
-              <span>Size: ${dl.file_size_display || (dl.file_size_bytes + ' B')}</span>
-              <span>Domain: <strong>${dl.source_domain || 'Direct / Local'}</strong></span>
-              <span>Time: ${dl.download_timestamp ? new Date(dl.download_timestamp).toLocaleTimeString() : '--'}</span>
-            </div>
-            <div style="font-size: 11px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; word-break: break-all;">
-              Path: ${dl.destination_path || 'Downloads'}
-            </div>
-            ${sigs ? `<div class="item-chips">${sigs}</div>` : ""}
-          </div>
-        `;
-      }).join("");
-    }
-
-    // --- Files & Folders Activity ---
-    async function fetchFiles() {
-      try {
-        const res = await fetch("/activities/files?limit=40&token=" + encodeURIComponent(currentToken));
-        if (res.ok) {
-          const data = await res.json();
-          allFileActivities = data.activities || [];
-          renderFiles(allFileActivities);
+        if (sm.battery) {
+          const battP = sm.battery.percent !== null ? sm.battery.percent : 100;
+          document.getElementById('gauge-batt-val').innerText = battP + "%";
+          document.getElementById('gauge-batt-fill').style.width = Math.min(battP, 100) + "%";
+          document.getElementById('sub-batt-plugged').innerText = sm.battery.plugged ? "AC Power Connected ⚡" : "On Battery 🔋";
         }
-      } catch (e) {}
-    }
 
-    function filterFiles(type) {
-      if (type === "ALL") {
-        renderFiles(allFileActivities);
-      } else if (type === "FOLDER") {
-        renderFiles(allFileActivities.filter(f => f.event_type.includes("FOLDER")));
-      } else {
-        renderFiles(allFileActivities.filter(f => f.event_type.includes(type)));
+        if (sm.network) {
+          document.getElementById('overview-net-speed').innerText = `DL: ${sm.network.download_speed_kbps || 0} KB/s • UL: ${sm.network.upload_speed_kbps || 0} KB/s`;
+        }
       }
     }
 
-    function renderFiles(files) {
-      const container = document.getElementById("files-feed-list");
-      if (!files || files.length === 0) {
-        container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 25px;">Listening for filesystem events in authorized directories...</div>`;
-        return;
+    // ── Fetch Security Alerts (Requirement 2) ────────────────────
+    async function fetchSecurityAlerts() {
+      try {
+        const res = await fetch("/security/alerts");
+        if (!res.ok) return;
+        const data = await res.json();
+        const container = document.getElementById('security-alerts-container');
+        const badge = document.getElementById('badge-sec-alerts-count');
+
+        if (!data.alerts || data.alerts.length === 0) {
+          container.innerHTML = `
+            <div class="empty-placeholder">
+              <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span>No security anomalies or unauthorized connection attempts detected.</span>
+            </div>`;
+          badge.style.display = 'none';
+          return;
+        }
+
+        badge.innerText = data.alerts.length;
+        badge.style.display = 'inline-block';
+
+        let html = '';
+        data.alerts.forEach(a => {
+          const timeStr = a.timestamp ? new Date(a.timestamp).toLocaleTimeString() : 'Just now';
+          const sevClass = a.severity || 'INFO';
+          html += `
+            <div class="item-card">
+              <div class="item-card-top">
+                <span class="item-name">
+                  <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <span>${escapeHtml(a.event_type ? a.event_type.replace(/_/g, ' ') : 'Security Event')}</span>
+                </span>
+                <span class="badge badge-${sevClass}">${sevClass}</span>
+              </div>
+              <div style="font-size:13px; color:var(--text-secondary); margin-top:2px;">
+                ${escapeHtml(a.details || 'Security event logged.')}
+              </div>
+              <div class="item-meta">
+                <span><strong>Device:</strong> ${escapeHtml(a.device_name || 'Endpoint')}</span>
+                <span><strong>Status:</strong> ${escapeHtml(a.connection_status || 'Logged')}</span>
+                <span><strong>Time:</strong> ${timeStr}</span>
+              </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+      } catch (e) {
+        console.debug("fetchSecurityAlerts note:", e);
       }
-
-      container.innerHTML = files.map(f => {
-        let etColor = "var(--accent-cyan)";
-        if (f.event_type.includes("DELETED")) etColor = "var(--accent-red)";
-        if (f.event_type.includes("MODIFIED")) etColor = "var(--accent-yellow)";
-        if (f.event_type.includes("CREATED")) etColor = "var(--accent-green)";
-
-        const sigs = (f.signals || []).map(s => `<span class="chip" style="color: var(--accent-orange);">${s}</span>`).join("");
-
-        return `
-          <div class="item-card">
-            <div class="item-card-top">
-              <span class="item-name">${f.file_name || 'Item'}</span>
-              <span class="badge" style="background: rgba(255,255,255,0.08); color: ${etColor}; border: 1px solid ${etColor};">${f.event_type}</span>
-            </div>
-            <div class="item-meta">
-              <span>Path: ${f.file_path}</span>
-              ${f.file_size_bytes ? `<span>Size: ${f.file_size_bytes} B</span>` : ""}
-              ${f.entropy !== null && f.entropy !== undefined ? `<span>Entropy: ${f.entropy}</span>` : ""}
-              ${f.responsible_process ? `<span style="color: var(--accent-cyan);">Process: ${f.responsible_process}</span>` : ""}
-              <span>Time: ${f.timestamp ? new Date(f.timestamp).toLocaleTimeString() : '--'}</span>
-            </div>
-            ${sigs ? `<div class="item-chips">${sigs}</div>` : ""}
-          </div>
-        `;
-      }).join("");
     }
 
-    // --- Incidents & Security Alerts ---
+    // ── Fetch Threat Incidents ───────────────────────────────────
     async function fetchIncidents() {
       try {
-        const res = await fetch("/incidents?limit=30&token=" + encodeURIComponent(currentToken));
-        if (res.ok) {
-          const data = await res.json();
-          renderIncidents(data.incidents || []);
+        const res = await fetch("/incidents?token=" + encodeURIComponent(currentToken));
+        if (!res.ok) return;
+        const data = await res.json();
+        const container = document.getElementById('incidents-container');
+        const countBadge = document.getElementById('btn-threat-count');
+
+        countBadge.innerText = data.count || (data.incidents ? data.incidents.length : 0);
+
+        if (!data.incidents || data.incidents.length === 0) {
+          container.innerHTML = `
+            <div class="empty-placeholder">
+              <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span>System is clean. No active threat incidents detected.</span>
+            </div>`;
+          return;
         }
-      } catch (e) {}
-    }
 
-    function renderIncidents(incidents) {
-      const container = document.getElementById("incidents-container");
-      if (!incidents || incidents.length === 0) {
-        container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 30px;">No incidents detected. All endpoint monitors operational.</div>`;
-        return;
-      }
+        let html = '';
+        data.incidents.forEach(inc => {
+          const score = inc.risk_score || 0;
+          const band = inc.risk_band || 'LOW';
+          const isRed = band === 'RED' || score >= 85;
 
-      // Check if top critical incident requires red alert banner
-      const crit = incidents.find(i => (i.risk_score >= 80 || i.risk_band === "RED") && i.status !== "RESOLVED" && i.status !== "ROLLED_BACK");
-      if (crit) {
-        triggerRedAlertUI(crit);
-      }
+          if (isRed && inc.status === 'OPEN') {
+            triggerRedAlert(inc);
+          }
 
-      container.innerHTML = incidents.map(inc => {
-        const band = inc.risk_band || "GREEN";
-        const score = inc.risk_score || 0;
-        const proc = inc.root_process_name || "Process";
-        const pid = inc.root_pid ? `(PID ${inc.root_pid})` : "";
-        const sigs = (inc.signals || []).map(s => `<span class="chip">${s}</span>`).join("");
-        const files = (inc.touched_files || []).slice(0, 3).map(f => `<span class="chip">📄 ${f.split(/[\\\\/]/).pop()}</span>`).join("");
-
-        const rollbackBtn = (inc.status === "CONTAINED" || inc.status === "OPEN" || inc.status === "ACTIVE")
-          ? `<button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="triggerRollback('${inc.incident_id}')">↩️ Rollback Containment</button>`
-          : `<span style="font-size: 11px; color: var(--accent-green); font-family: 'JetBrains Mono', monospace;">✓ ${inc.status}</span>`;
-
-        return `
-          <div class="item-card" style="border-left: 4px solid var(--accent-${band === 'RED' ? 'red' : (band === 'ORANGE' ? 'orange' : 'green')});">
-            <div class="item-card-top">
-              <span class="item-name">
-                <span>${band === 'RED' ? '🚨' : (band === 'ORANGE' ? '⚠️' : '🛡️')}</span>
-                <span>${proc} ${pid}</span>
-              </span>
-              <span class="badge badge-${band}">${band} • ${score}/100</span>
-            </div>
-            <div style="font-size: 13px; color: #cbd5e1; margin: 4px 0;">
-              ${inc.explanation || "Heuristic anomaly detected."}
-            </div>
-            <div class="item-meta">
-              <span>Incident: ${inc.incident_id ? inc.incident_id.substring(0, 8) : '--'}</span>
-              <span>Updated: ${inc.updated_at ? new Date(inc.updated_at).toLocaleTimeString() : '--'}</span>
-            </div>
-            ${files ? `<div class="item-chips" style="margin-top: 4px;">${files}</div>` : ""}
-            <div class="item-chips">${sigs}</div>
-            <div style="margin-top: 10px; display: flex; justify-content: flex-end; gap: 6px;">
-              ${rollbackBtn}
-            </div>
-          </div>
-        `;
-      }).join("");
-    }
-
-    // --- Red Alert Handling ---
-    function triggerRedAlertUI(inc) {
-      currentRedAlert = inc;
-      const banner = document.getElementById("red-alert-banner");
-      banner.style.display = "block";
-
-      document.getElementById("ra-threat-name").innerText = inc.threat_name || (inc.signals && inc.signals.includes("modified_encrypted_many_files") ? "Mass File Modification Detected" : `High Risk Threat: ${inc.root_process_name}`);
-      document.getElementById("ra-process").innerText = `${inc.root_process_name || 'Process'} (PID ${inc.root_pid || 'N/A'})`;
-      
-      const files = inc.touched_files || [];
-      const folder = files.length > 0 ? files[0].substring(0, files[0].lastIndexOf("\\\\") || files[0].lastIndexOf("/")) : "Documents/Projects";
-      document.getElementById("ra-folder").innerText = folder || "Documents/Projects";
-      document.getElementById("ra-count").innerText = files.length > 0 ? files.length : "247";
-      document.getElementById("ra-time").innerText = inc.updated_at ? new Date(inc.updated_at).toLocaleTimeString() : "Just now";
-      document.getElementById("ra-reason").innerText = inc.explanation || "Rapid high-entropy file modifications matching ransomware-like activity.";
-
-      // Native browser notification
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("🔴 CRITICAL SECURITY ALERT: DefenceIQ", {
-          body: `${document.getElementById("ra-threat-name").innerText} - Process: ${inc.root_process_name}`,
-          icon: "/favicon.ico"
+          html += `
+            <div class="item-card">
+              <div class="item-card-top">
+                <span class="item-name">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span>${escapeHtml(inc.root_process_name || 'Process')} (PID: ${inc.root_pid || 'N/A'})</span>
+                </span>
+                <span class="badge badge-${band}">SCORE ${score} • ${band}</span>
+              </div>
+              <div style="font-size:13px; color:var(--text-secondary);">
+                ${escapeHtml(inc.explanation || 'Suspicious signals detected')}
+              </div>
+              <div class="item-meta">
+                <span><strong>ID:</strong> ${inc.incident_id}</span>
+                <span><strong>Status:</strong> ${inc.status}</span>
+                <span><strong>Signals:</strong> ${(inc.signals || []).join(', ') || 'Anomaly'}</span>
+              </div>
+              <div style="display:flex; gap:8px; margin-top:4px;">
+                <button class="btn btn-primary" onclick="rollbackIncident('${inc.incident_id}')">Reversible Rollback</button>
+                <button class="btn btn-secondary" onclick="acknowledgeIncident('${inc.incident_id}')">Acknowledge</button>
+              </div>
+            </div>`;
         });
+        container.innerHTML = html;
+      } catch (e) {
+        console.debug("fetchIncidents note:", e);
       }
+    }
+
+    async function rollbackIncident(id) {
+      try {
+        const res = await fetch(`/incidents/${id}/rollback?token=` + encodeURIComponent(currentToken), { method: "POST" });
+        if (res.ok) {
+          showToast(`Incident ${id} rollback executed.`);
+          dismissRedAlert();
+          fetchIncidents();
+        }
+      } catch (e) {
+        showToast("Rollback error: " + e.message, true);
+      }
+    }
+
+    async function acknowledgeIncident(id) {
+      try {
+        const res = await fetch(`/actions/respond?token=` + encodeURIComponent(currentToken), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "acknowledge", incident_id: id })
+        });
+        if (res.ok) {
+          showToast(`Incident ${id} acknowledged.`);
+          dismissRedAlert();
+          fetchIncidents();
+        }
+      } catch (e) {
+        showToast("Error: " + e.message, true);
+      }
+    }
+
+    // ── Red Alert Banner Handlers ────────────────────────────────
+    function triggerRedAlert(inc) {
+      activeIncidentId = inc.incident_id;
+      const banner = document.getElementById('red-alert-banner');
+      document.getElementById('red-alert-title').innerText = "CRITICAL SECURITY INCIDENT DETECTED";
+      document.getElementById('red-alert-score').innerText = "SCORE: " + (inc.risk_score || 95);
+      document.getElementById('red-alert-proc').innerText = inc.root_process_name || "malware.exe";
+      document.getElementById('red-alert-action').innerText = inc.status === "CONTAINED" ? "Process Suspended" : "Containment Active";
+      document.getElementById('red-alert-signals').innerText = (inc.signals || []).slice(0, 2).join(', ');
+      document.getElementById('red-alert-id').innerText = inc.incident_id || "INC-0000";
+      banner.style.display = "block";
     }
 
     function dismissRedAlert() {
-      document.getElementById("red-alert-banner").style.display = "none";
-      if (currentRedAlert) {
-        fetch("/actions/respond?token=" + encodeURIComponent(currentToken), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "acknowledge", incident_id: currentRedAlert.incident_id })
-        });
-      }
+      document.getElementById('red-alert-banner').style.display = "none";
     }
 
-    async function rollbackActiveRedAlert() {
-      if (!currentRedAlert) return;
-      await triggerRollback(currentRedAlert.incident_id);
-      dismissRedAlert();
+    function rollbackActiveIncident() {
+      if (activeIncidentId) rollbackIncident(activeIncidentId);
     }
 
-    async function suspendActiveRedAlertProcess() {
-      if (!currentRedAlert) return;
-      try {
-        const res = await fetch("/actions/respond?token=" + encodeURIComponent(currentToken), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "suspend_process",
-            incident_id: currentRedAlert.incident_id,
-            target_pid: currentRedAlert.root_pid
-          })
-        });
-        const data = await res.json();
-        alert("Process suspension action executed.");
-        fetchIncidents();
-        fetchStatus();
-      } catch (e) {
-        alert("Action error: " + e.message);
-      }
-    }
-
-    function investigateActiveRedAlert() {
-      switchTab('tab-alerts');
-    }
-
-    async function triggerRollback(incidentId) {
-      if (!confirm("Execute automated containment rollback to restore files/firewall?")) return;
-      try {
-        const res = await fetch(`/incidents/${incidentId}/rollback?token=` + encodeURIComponent(currentToken), { method: "POST" });
-        const data = await res.json();
-        if (data.success) {
-          alert("Rollback executed successfully!");
-          fetchIncidents();
-          fetchStatus();
-        } else {
-          alert("Rollback failed: " + (data.detail || "Error"));
-        }
-      } catch (e) {
-        alert("Rollback error: " + e.message);
-      }
-    }
-
-    // --- Simulations ---
-    async function triggerSimulation(scenario) {
+    // ── Simulation Helper ────────────────────────────────────────
+    async function simulateAlert(scenario) {
       try {
         const res = await fetch("/simulate/alert?token=" + encodeURIComponent(currentToken), {
           method: "POST",
@@ -1681,214 +1929,264 @@ def get_dashboard_html() -> str:
         });
         const data = await res.json();
         if (data.success) {
+          showToast("Simulated threat generated: " + scenario);
           fetchIncidents();
-          fetchStatus();
-          switchTab('tab-alerts');
         }
       } catch (e) {
-        alert("Simulation error: " + e.message);
+        showToast("Simulation error: " + e.message, true);
       }
     }
 
-    // --- Scope & Settings ---
-    async function addMonitoredPath() {
-      const input = document.getElementById("add-path-input");
-      const pathVal = input.value.trim();
-      if (!pathVal) return;
+    // ── Fetch Windows / Tabs ─────────────────────────────────────
+    async function fetchWindows() {
       try {
-        const res = await fetch("/protection/scope?token=" + encodeURIComponent(currentToken), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ add_path: pathVal })
-        });
+        const res = await fetch("/activities/windows?token=" + encodeURIComponent(currentToken));
+        if (!res.ok) return;
         const data = await res.json();
-        if (data.success) {
-          alert("Added path to authorized scope: " + pathVal);
-          input.value = "";
-          renderAuthorizedPaths(data.authorized_directories);
+        const container = document.getElementById('windows-container');
+
+        if (data.current_activity) {
+          document.getElementById('overview-active-title').innerText = data.current_activity.window_title || "Active Workspace";
+          document.getElementById('overview-active-sub').innerText = `${data.current_activity.process_name || 'system'} • ${data.current_activity.domain || 'Local'}`;
         }
+
+        const recent = data.recent_activities || [];
+        if (recent.length === 0) {
+          container.innerHTML = `<div class="empty-placeholder"><span>No recent window activity recorded.</span></div>`;
+          return;
+        }
+
+        let html = '';
+        recent.forEach(w => {
+          html += `
+            <div class="item-card">
+              <div class="item-card-top">
+                <span class="item-name">
+                  <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/></svg>
+                  <span>${escapeHtml(w.window_title || 'Untitled')}</span>
+                </span>
+                <span class="badge badge-INFO">${escapeHtml(w.process_name || 'app')}</span>
+              </div>
+              <div class="item-meta">
+                ${w.domain ? `<span><strong>Domain:</strong> ${escapeHtml(w.domain)}</span>` : ''}
+                <span><strong>Duration:</strong> ${w.duration_seconds || 1}s</span>
+                <span><strong>Time:</strong> ${w.timestamp ? new Date(w.timestamp).toLocaleTimeString() : ''}</span>
+              </div>
+            </div>`;
+        });
+        container.innerHTML = html;
       } catch (e) {
-        alert("Error updating scope: " + e.message);
+        console.debug("fetchWindows note:", e);
       }
     }
 
-    async function setProtectionLevel(lvl) {
+    // ── Fetch Downloads & Files ──────────────────────────────────
+    async function fetchDownloads() {
       try {
-        const res = await fetch("/protection/level?token=" + encodeURIComponent(currentToken), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ level: lvl })
-        });
+        const res = await fetch("/activities/downloads?token=" + encodeURIComponent(currentToken));
+        if (!res.ok) return;
         const data = await res.json();
-        if (data.success) {
-          alert("Protection level set to: " + lvl.toUpperCase());
-          fetchStatus();
+        const container = document.getElementById('downloads-container');
+
+        if (!data.downloads || data.downloads.length === 0) {
+          container.innerHTML = `<div class="empty-placeholder"><span>No downloads recorded.</span></div>`;
+          return;
         }
+
+        let html = '';
+        data.downloads.forEach(d => {
+          const verdict = d.scan_verdict || 'CLEAN';
+          const isMal = verdict === 'MALICIOUS' || verdict === 'SUSPICIOUS';
+          html += `
+            <div class="item-card">
+              <div class="item-card-top">
+                <span class="item-name">
+                  <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span>${escapeHtml(d.file_name || 'Download')}</span>
+                </span>
+                <span class="badge badge-${isMal ? 'RED' : 'GREEN'}">${verdict}</span>
+              </div>
+              <div class="item-meta">
+                <span><strong>Size:</strong> ${(d.file_size_bytes / 1024).toFixed(1)} KB</span>
+                <span><strong>Source:</strong> ${escapeHtml(d.origin_domain || 'Web')}</span>
+                <span><strong>Time:</strong> ${d.timestamp ? new Date(d.timestamp).toLocaleTimeString() : ''}</span>
+              </div>
+            </div>`;
+        });
+        container.innerHTML = html;
       } catch (e) {
-        alert("Error setting level: " + e.message);
+        console.debug("fetchDownloads note:", e);
       }
     }
 
-    function renderAuthorizedPaths(paths) {
-      const c = document.getElementById("authorized-paths-container");
-      if (!paths || !c) return;
-      c.innerHTML = paths.map(p => `<div class="item-card"><span class="item-name">${p}</span></div>`).join("");
+    async function fetchFiles() {
+      try {
+        const res = await fetch("/activities/files?token=" + encodeURIComponent(currentToken));
+        if (!res.ok) return;
+        const data = await res.json();
+        const container = document.getElementById('files-container');
+
+        if (!data.activities || data.activities.length === 0) {
+          container.innerHTML = `<div class="empty-placeholder"><span>No file activity recorded.</span></div>`;
+          return;
+        }
+
+        let html = '';
+        data.activities.slice(0, 15).forEach(f => {
+          html += `
+            <div class="item-card">
+              <div class="item-card-top">
+                <span class="item-name">
+                  <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  <span>${escapeHtml(f.file_path ? f.file_path.split('\\\\').pop() : 'File')}</span>
+                </span>
+                <span class="badge badge-INFO">${escapeHtml(f.event_type || 'CHANGE')}</span>
+              </div>
+              <div class="item-meta">
+                <span><strong>Path:</strong> ${escapeHtml(f.file_path || '')}</span>
+                <span><strong>Time:</strong> ${f.timestamp ? new Date(f.timestamp).toLocaleTimeString() : ''}</span>
+              </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+      } catch (e) {
+        console.debug("fetchFiles note:", e);
+      }
     }
 
-    // --- WebSocket Connection ---
-    function connectWebSocket() {
-      if (ws) ws.close();
-      const loc = window.location;
-      const wsProto = loc.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${wsProto}//${loc.host}/ws/alerts?token=${encodeURIComponent(currentToken)}`;
+    // ── Fetch Quarantine Vault ───────────────────────────────────
+    async function fetchQuarantine() {
+      try {
+        const res = await fetch("/quarantine?token=" + encodeURIComponent(currentToken));
+        if (!res.ok) return;
+        const data = await res.json();
+        const container = document.getElementById('quarantine-container');
+
+        if (!data.quarantined_files || data.quarantined_files.length === 0) {
+          container.innerHTML = `
+            <div class="empty-placeholder">
+              <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <span>Quarantine vault is empty. No files isolated.</span>
+            </div>`;
+          return;
+        }
+
+        let html = '';
+        data.quarantined_files.forEach(q => {
+          html += `
+            <div class="item-card">
+              <div class="item-card-top">
+                <span class="item-name">
+                  <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  <span>${escapeHtml(q.original_name || 'Isolated File')}</span>
+                </span>
+                <span class="badge badge-RED">${q.status || 'CONTAINED'}</span>
+              </div>
+              <div class="item-meta">
+                <span><strong>ID:</strong> ${q.quarantine_id}</span>
+                <span><strong>Isolated At:</strong> ${q.quarantined_at ? new Date(q.quarantined_at).toLocaleString() : ''}</span>
+              </div>
+              <div style="margin-top:6px;">
+                <button class="btn btn-success" onclick="restoreQuarantineFile('${q.quarantine_id}')">Restore File</button>
+              </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+      } catch (e) {
+        console.debug("fetchQuarantine note:", e);
+      }
+    }
+
+    async function restoreQuarantineFile(qid) {
+      try {
+        const res = await fetch(`/quarantine/${qid}/restore?token=` + encodeURIComponent(currentToken), { method: "POST" });
+        if (res.ok) {
+          showToast(`File ${qid} restored to original location.`);
+          fetchQuarantine();
+        }
+      } catch (e) {
+        showToast("Error restoring file: " + e.message, true);
+      }
+    }
+
+    // ── Escape HTML Helper ───────────────────────────────────────
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // ── WebSocket Live Connection ────────────────────────────────
+    function setupWebSocket() {
+      if (ws) {
+        try { ws.close(); } catch(e){}
+      }
+      const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${proto}//${window.location.host}/ws/alerts?token=${encodeURIComponent(currentToken)}`;
 
       try {
         ws = new WebSocket(wsUrl);
-
         ws.onopen = () => {
-          document.getElementById("header-conn-text").innerText = "LIVE WS STREAM";
+          updateConnectionBadge("Connected");
+          document.getElementById('card-last-seen').innerText = "Just now";
         };
-
         ws.onmessage = (event) => {
+          lastSeenEpoch = Date.now();
+          document.getElementById('card-last-seen').innerText = "Just now";
           try {
-            const frame = JSON.parse(event.data);
-            if (frame.type === "incident") {
+            const msg = JSON.parse(event.data);
+            if (msg.type === "incident" && msg.incident) {
+              if (msg.incident.risk_band === "RED" || msg.incident.risk_score >= 85) {
+                triggerRedAlert(msg.incident);
+              }
               fetchIncidents();
-              fetchStatus();
-            } else if (frame.type === "paired_mobile" || frame.type === "token_rotated") {
-              fetchStatus();
-            } else if (frame.type === "telemetry_event" || frame.type === "action") {
-              fetchStatus();
+            } else if (msg.type === "security_alert") {
+              fetchSecurityAlerts();
+            } else if (msg.type === "device_paired" || msg.type === "paired_mobile" || msg.type === "pairing_revoked") {
+              fetchPairingStatus();
             }
-          } catch (e) {}
+          } catch(e){}
         };
-
         ws.onclose = () => {
-          setTimeout(connectWebSocket, 4000);
+          updateConnectionBadge("Connection Lost");
+          setTimeout(setupWebSocket, 4000);
         };
-      } catch (e) {}
+      } catch(e) {
+        console.debug("WS connection note:", e);
+      }
     }
 
-    // --- Init ---
-    async function init() {
-      document.getElementById("token-text").innerText = currentToken || "NOT SET";
-
-      if ("Notification" in window && Notification.permission === "default") {
-        Notification.requestPermission();
+    // ── App Initialization ───────────────────────────────────────
+    function init() {
+      // Check URL query parameters for token first
+      const params = new URLSearchParams(window.location.search);
+      const urlToken = params.get("token");
+      if (urlToken) {
+        currentToken = urlToken.trim().toUpperCase();
+        localStorage.setItem("defenceiq_token", currentToken);
+      } else {
+        currentToken = localStorage.getItem("defenceiq_token") || "";
       }
 
-      await fetchStatus();
-      await fetchWindows();
-      await fetchDownloads();
-      await fetchFiles();
-      await fetchIncidents();
-      connectWebSocket();
+      fetchPairingStatus();
+      fetchStatus();
+      fetchSecurityAlerts();
+      fetchIncidents();
+      fetchWindows();
+      setupWebSocket();
 
-      // Live interval tickers
-      if (pollTimer) clearInterval(pollTimer);
-      pollTimer = setInterval(() => {
+      // Periodic auto-refresh every 3.5 seconds
+      if (pollInterval) clearInterval(pollInterval);
+      pollInterval = setInterval(() => {
         fetchStatus();
-        checkOfflineState();
+        fetchPairingStatus();
       }, 3500);
-
-      if (durationTimer) clearInterval(durationTimer);
-      durationTimer = setInterval(() => {
-        activeDurationSeconds += 1;
-        document.getElementById("ov-duration").innerText = formatDuration(activeDurationSeconds);
-        document.getElementById("win-duration-text").innerText = formatDuration(activeDurationSeconds);
-      }, 1000);
     }
 
     window.addEventListener("DOMContentLoaded", init);
-
-    // ── PWA Install Banner ──────────────────────────────────────
-    let _deferredInstallPrompt = null;
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      _deferredInstallPrompt = e;
-      const banner = document.getElementById('pwa-install-banner');
-      if (banner) banner.style.display = 'flex';
-    });
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const btn = document.getElementById('pwa-install-btn');
-      const dismiss = document.getElementById('pwa-install-dismiss');
-      if (btn) {
-        btn.addEventListener('click', async () => {
-          if (_deferredInstallPrompt) {
-            _deferredInstallPrompt.prompt();
-            const { outcome } = await _deferredInstallPrompt.userChoice;
-            _deferredInstallPrompt = null;
-            document.getElementById('pwa-install-banner').style.display = 'none';
-          }
-        });
-      }
-      if (dismiss) {
-        dismiss.addEventListener('click', () => {
-          document.getElementById('pwa-install-banner').style.display = 'none';
-        });
-      }
-    });
-
-    window.addEventListener('appinstalled', () => {
-      document.getElementById('pwa-install-banner').style.display = 'none';
-    });
-
-    // ── Service Worker Registration ─────────────────────────────
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').then(reg => {
-          console.log('[DefenceIQ PWA] Service worker registered:', reg.scope);
-        }).catch(err => {
-          console.warn('[DefenceIQ PWA] SW registration failed:', err);
-        });
-      });
-    }
   </script>
-
-  <!-- PWA Install Banner -->
-  <div id="pwa-install-banner" style="
-    display: none;
-    position: fixed;
-    bottom: 80px;
-    left: 12px;
-    right: 12px;
-    background: linear-gradient(135deg, rgba(0,229,255,0.18), rgba(0,255,136,0.12));
-    border: 1px solid rgba(0,229,255,0.45);
-    border-radius: 16px;
-    padding: 14px 16px;
-    z-index: 9999;
-    align-items: center;
-    gap: 12px;
-    backdrop-filter: blur(14px);
-    box-shadow: 0 8px 32px rgba(0,229,255,0.2);
-  ">
-    <span style="font-size:26px;">🛡️</span>
-    <div style="flex:1;">
-      <div style="font-weight:700;font-size:14px;color:#00e5ff;font-family:'Outfit',sans-serif;">Install DefenceIQ</div>
-      <div style="font-size:12px;color:#94a3b8;font-family:'Outfit',sans-serif;">Add to home screen for app-like experience</div>
-    </div>
-    <button id="pwa-install-btn" style="
-      background: linear-gradient(135deg,#00e5ff,#00ff88);
-      color:#070a12;
-      border:none;
-      border-radius:10px;
-      padding:8px 14px;
-      font-weight:700;
-      font-size:13px;
-      cursor:pointer;
-      font-family:'Outfit',sans-serif;
-    ">Install</button>
-    <button id="pwa-install-dismiss" style="
-      background:transparent;
-      border:1px solid rgba(255,255,255,0.2);
-      border-radius:8px;
-      color:#94a3b8;
-      padding:8px 10px;
-      cursor:pointer;
-      font-size:12px;
-    ">✕</button>
-  </div>
 </body>
 </html>"""

@@ -15,13 +15,19 @@ import okhttp3.WebSocket
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.text.SimpleDateFormat
+import java.util.*
 import java.util.concurrent.TimeUnit
 
-enum class ConnectionStatus {
-    DISCONNECTED,
-    CONNECTING,
-    CONNECTED,
-    ERROR
+enum class ConnectionStatus(val label: String) {
+    CONNECTED("Connected"),
+    CONNECTING("Connecting"),
+    CONNECTION_LOST("Connection Lost"),
+    LAPTOP_OFFLINE("Laptop Offline"),
+    DISCONNECTED("Disconnected");
+
+    val isOnline: Boolean
+        get() = this == CONNECTED
 }
 
 /**
@@ -31,6 +37,10 @@ enum class ConnectionStatus {
  * Supports:
  * 1. IP-Independent Cloud Relay pairing via unique token (Primary)
  * 2. Local Wi-Fi / LAN REST & WebSocket direct pairing (Secondary / Fallback)
+ * 3. Bidirectional Token Pairing (Laptop -> Phone and Phone -> Laptop)
+ * 4. Automatic Security Alerts for device connections, unexpected disconnects,
+ *    unauthenticated attempts, and status transitions.
+ * 5. Watchdog keepalive tracking with real-time last-seen updates.
  */
 class DefenceIqRepository(
     private val appContext: Context? = null,
@@ -47,11 +57,21 @@ class DefenceIqRepository(
     var token: String = "DIQ-FUXN-G8CE"
         private set
 
+    // Watchdog and timing
+    private var lastHeartbeatTimeMs: Long = 0L
+
     // Cloud Relay Client (IP-Independent)
-    val cloudRelay = CloudRelayClient(
+    val cloudRelay: CloudRelayClient = CloudRelayClient(
         scope = scope,
         onThreatAlertReceived = { alert ->
             onCloudThreatAlert(alert)
+        },
+        onSecurityAlertReceived = { secAlert ->
+            onSecurityAlert(secAlert)
+        },
+        onStatusReceived = { status ->
+            _agentStatus.value = status
+            recordHeartbeat("relay")
         }
     )
 
@@ -65,6 +85,9 @@ class DefenceIqRepository(
     private val _incidents = MutableStateFlow<List<Incident>>(emptyList())
     val incidents: StateFlow<List<Incident>> = _incidents.asStateFlow()
 
+    private val _securityAlerts = MutableStateFlow<List<SecurityAlert>>(emptyList())
+    val securityAlerts: StateFlow<List<SecurityAlert>> = _securityAlerts.asStateFlow()
+
     private val _quarantinedFiles = MutableStateFlow<List<QuarantinedFile>>(emptyList())
     val quarantinedFiles: StateFlow<List<QuarantinedFile>> = _quarantinedFiles.asStateFlow()
 
@@ -73,6 +96,19 @@ class DefenceIqRepository(
 
     private val _lastError = MutableStateFlow<String?>(null)
     val lastError: StateFlow<String?> = _lastError.asStateFlow()
+
+    private val _lastSeen = MutableStateFlow<String>("Never")
+    val lastSeen: StateFlow<String> = _lastSeen.asStateFlow()
+
+    private val _lastConnected = MutableStateFlow<String>("Never")
+    val lastConnected: StateFlow<String> = _lastConnected.asStateFlow()
+
+    // Reverse pairing token (Phone -> Laptop)
+    private val _mobilePairingToken = MutableStateFlow<String?>(null)
+    val mobilePairingToken: StateFlow<String?> = _mobilePairingToken.asStateFlow()
+
+    private val _mobileTokenExpiresAt = MutableStateFlow<Long>(0L)
+    val mobileTokenExpiresAt: StateFlow<Long> = _mobileTokenExpiresAt.asStateFlow()
 
     val pairedDevice: StateFlow<PairedDevice?> = cloudRelay.pairedDevice
 
@@ -98,17 +134,34 @@ class DefenceIqRepository(
                 if (dev != null) {
                     _connectionState.value = ConnectionStatus.CONNECTED
                     token = dev.token
-                    // Synthesize agent status for UI
-                    _agentStatus.value = AgentStatusResponse(
-                        healthState = "SECURE",
-                        protectionLevel = dev.protectionLevel,
-                        hostname = dev.hostname,
-                        lanIp = "Relay (Global)",
-                        timestamp = dev.pairedAt,
-                        monitoredPidsCount = 0,
-                        activeSocketsCount = 0,
-                        stats = SystemStats(0, _incidents.value.size, mapOf("RED" to 0, "ORANGE" to 0), 0),
-                        engines = mapOf("cloud_relay" to "active", "threat_watcher" to "active")
+                    recordHeartbeat("relay_handshake")
+                    val nowStr = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+                    _lastConnected.value = dev.pairedAt.ifEmpty { nowStr }
+
+                    // Synthesize agent status for UI if direct REST is not yet loaded
+                    if (_agentStatus.value == null) {
+                        _agentStatus.value = AgentStatusResponse(
+                            healthState = "SECURE",
+                            protectionLevel = dev.protectionLevel,
+                            hostname = dev.hostname,
+                            lanIp = "Relay (Global)",
+                            timestamp = dev.pairedAt,
+                            monitoredPidsCount = 0,
+                            activeSocketsCount = 0,
+                            stats = SystemStats(0, _incidents.value.size, mapOf("RED" to 0, "ORANGE" to 0), 0),
+                            engines = mapOf("cloud_relay" to "active", "threat_watcher" to "active"),
+                            connectionStatus = "Connected",
+                            lastSeen = nowStr,
+                            lastConnected = dev.pairedAt.ifEmpty { nowStr }
+                        )
+                    }
+
+                    emitSecurityAlert(
+                        eventType = "NEW_DEVICE_CONNECTED",
+                        details = "Securely linked with ${dev.hostname} (${dev.deviceId}) via End-to-End Encrypted Relay.",
+                        severity = "INFO",
+                        connStatus = "Connected",
+                        deviceName = dev.hostname
                     )
                 }
             }
@@ -133,9 +186,129 @@ class DefenceIqRepository(
                 }
             }
         }
+
+        // Heartbeat Watchdog: monitors connectivity in real-time
+        scope.launch {
+            while (isActive) {
+                delay(3000)
+                val now = System.currentTimeMillis()
+                if (_connectionState.value == ConnectionStatus.CONNECTED && lastHeartbeatTimeMs > 0) {
+                    val elapsed = now - lastHeartbeatTimeMs
+                    if (elapsed > 30000) {
+                        // More than 30s without heartbeat: mark Laptop Offline
+                        _connectionState.value = ConnectionStatus.LAPTOP_OFFLINE
+                        emitSecurityAlert(
+                            eventType = "CONNECTION_STATUS_CHANGED",
+                            details = "Laptop appears to be offline or shutdown. No signal received for 30+ seconds.",
+                            severity = "WARNING",
+                            connStatus = "Laptop Offline"
+                        )
+                    } else if (elapsed > 12000) {
+                        // More than 12s without heartbeat: mark Connection Lost
+                        _connectionState.value = ConnectionStatus.CONNECTION_LOST
+                        emitSecurityAlert(
+                            eventType = "CONNECTION_STATUS_CHANGED",
+                            details = "Connection to laptop lost unexpectedly. Awaiting reconnect...",
+                            severity = "WARNING",
+                            connStatus = "Connection Lost"
+                        )
+                    }
+                }
+            }
+        }
     }
 
     private fun getAuthHeader(): String = "Bearer $token"
+
+    fun recordHeartbeat(source: String = "telemetry") {
+        lastHeartbeatTimeMs = System.currentTimeMillis()
+        val nowStr = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        _lastSeen.value = nowStr
+        if (_connectionState.value != ConnectionStatus.CONNECTED && (cloudRelay.pairedDevice.value != null || apiService != null)) {
+            _connectionState.value = ConnectionStatus.CONNECTED
+        }
+    }
+
+    fun emitSecurityAlert(
+        eventType: String,
+        details: String,
+        severity: String = "INFO",
+        connStatus: String? = null,
+        deviceName: String? = null
+    ) {
+        val nowStr = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        val hostName = deviceName ?: (_agentStatus.value?.hostname ?: cloudRelay.pairedDevice.value?.hostname ?: "Host Laptop")
+        val statusStr = connStatus ?: _connectionState.value.label
+
+        // Guard against duplicate consecutive alerts
+        val existing = _securityAlerts.value.firstOrNull()
+        if (existing != null && existing.eventType == eventType && existing.details == details &&
+            System.currentTimeMillis() - lastHeartbeatTimeMs < 5000) {
+            return
+        }
+
+        val alert = SecurityAlert(
+            id = "alert-${System.currentTimeMillis()}-${(1000..9999).random()}",
+            eventType = eventType,
+            deviceName = hostName,
+            deviceType = "Laptop",
+            timestamp = nowStr,
+            connectionStatus = statusStr,
+            details = details,
+            severity = severity
+        )
+
+        val current = _securityAlerts.value.toMutableList()
+        current.add(0, alert)
+        _securityAlerts.value = current.take(100)
+
+        // Show native alert notification
+        appContext?.let {
+            NotificationHelper.showSecurityAlert(it, alert)
+        }
+    }
+
+    fun onSecurityAlert(alert: SecurityAlert) {
+        val current = _securityAlerts.value.toMutableList()
+        val idx = current.indexOfFirst { it.id == alert.id }
+        if (idx >= 0) {
+            current[idx] = alert
+        } else {
+            current.add(0, alert)
+        }
+        _securityAlerts.value = current.take(100)
+        recordHeartbeat("security_alert")
+        appContext?.let {
+            NotificationHelper.showSecurityAlert(it, alert)
+        }
+    }
+
+    /**
+     * Generates a secure, short-lived mobile pairing token for the Phone -> Laptop flow.
+     */
+    fun generateMobileToken(): String {
+        val tok = CloudRelayClient.generateToken()
+        _mobilePairingToken.value = tok
+        _mobileTokenExpiresAt.value = System.currentTimeMillis() + (10 * 60 * 1000) // 10 minutes
+        cloudRelay.startListeningWithToken(tok)
+        return tok
+    }
+
+    /**
+     * Maps errors to user-friendly messages without exposing raw stack traces.
+     */
+    fun mapErrorMessage(e: Throwable?, httpCode: Int? = null, errorBody: String? = null): String {
+        val bodyLower = errorBody?.lowercase() ?: ""
+        if (bodyLower.contains("expired")) return "Pairing token has expired. Please generate a new token on the laptop."
+        if (bodyLower.contains("already used")) return "This pairing token has already been used. Please generate a fresh token."
+        if (bodyLower.contains("multiple failed") || bodyLower.contains("3+")) return "Authentication blocked: multiple failed connection attempts detected."
+        if (httpCode == 401 || bodyLower.contains("invalid token") || bodyLower.contains("unauthorized")) return "Invalid pairing token. Please check the code and try again."
+        if (httpCode == 404 || httpCode == 502 || httpCode == 503 || httpCode == 504) return "Laptop agent is currently offline or unreachable."
+        if (e is java.net.SocketTimeoutException) return "Connection timed out. Ensure the laptop agent is running."
+        if (e is java.net.ConnectException) return "Could not connect to laptop. Check Wi-Fi / network connection."
+        if (e is java.net.UnknownHostException) return "Network host unreachable. Please verify network connection."
+        return errorBody?.takeIf { it.isNotBlank() && !it.contains("<html>") } ?: (e?.message ?: "Pairing failure. Please try again.")
+    }
 
     /**
      * Attempts direct connection to local laptop agent over Wi-Fi / USB tunnel.
@@ -219,6 +392,7 @@ class DefenceIqRepository(
             current.add(0, newInc)
         }
         _incidents.value = current
+        recordHeartbeat("threat_alert")
     }
 
     /**
@@ -251,21 +425,44 @@ class DefenceIqRepository(
             apiService = retrofit.create(DefenceIqApiService::class.java)
 
             // Test pairing endpoint
-            val pairRes = apiService!!.pairDevice(PairRequest(token))
+            val pairRes = apiService!!.pairDevice(
+                PairRequest(
+                    token = token,
+                    deviceName = "Android Mobile",
+                    deviceType = "Mobile Phone",
+                    confirm = true
+                )
+            )
+
             if (!pairRes.isSuccessful || pairRes.body() == null) {
-                _connectionState.value = ConnectionStatus.ERROR
-                val err = "Pairing failed: HTTP ${pairRes.code()} ${pairRes.message()}"
-                _lastError.value = err
-                return@withContext Result.failure(Exception(err))
+                val errBody = pairRes.errorBody()?.string() ?: ""
+                val friendly = mapErrorMessage(null, pairRes.code(), errBody)
+                _connectionState.value = ConnectionStatus.DISCONNECTED
+                _lastError.value = friendly
+
+                // Emit security alert on auth failure
+                emitSecurityAlert(
+                    eventType = "AUTHENTICATION_FAILED",
+                    details = "Pairing attempt failed: $friendly",
+                    severity = "WARNING",
+                    connStatus = "Disconnected"
+                )
+
+                return@withContext Result.failure(Exception(friendly))
             }
 
             val pairBody = pairRes.body()!!
             _connectionState.value = ConnectionStatus.CONNECTED
+            val nowStr = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+            _lastConnected.value = nowStr
+            _lastSeen.value = nowStr
+            recordHeartbeat("pair_success")
 
             // Initial fetch of status, incidents, and quarantine vault
             refreshStatus()
             refreshIncidents()
             refreshQuarantine()
+            refreshSecurityAlerts()
 
             // Establish real-time WebSocket connection
             connectWebSocket()
@@ -273,12 +470,21 @@ class DefenceIqRepository(
             // Also activate cloud relay listener for this token
             cloudRelay.startListeningWithToken(token)
 
+            emitSecurityAlert(
+                eventType = "NEW_DEVICE_CONNECTED",
+                details = "Successfully paired with laptop ${pairBody.hostname} (${pairBody.lanIp}).",
+                severity = "INFO",
+                connStatus = "Connected",
+                deviceName = pairBody.hostname
+            )
+
             Result.success(pairBody)
         } catch (e: Exception) {
-            _connectionState.value = ConnectionStatus.ERROR
-            _lastError.value = e.message
-            Log.e(tag, "Pairing exception: ${e.message}", e)
-            Result.failure(e)
+            val friendly = mapErrorMessage(e)
+            _connectionState.value = ConnectionStatus.DISCONNECTED
+            _lastError.value = friendly
+            Log.e(tag, "Pairing exception: $friendly", e)
+            Result.failure(Exception(friendly))
         }
     }
 
@@ -302,9 +508,19 @@ class DefenceIqRepository(
             gson = gson,
             onConnected = {
                 _connectionState.value = ConnectionStatus.CONNECTED
+                recordHeartbeat("ws_open")
             },
             onDisconnected = { reason ->
                 Log.w(tag, "WebSocket disconnected: $reason")
+                if (_connectionState.value == ConnectionStatus.CONNECTED) {
+                    _connectionState.value = ConnectionStatus.CONNECTION_LOST
+                    emitSecurityAlert(
+                        eventType = "DEVICE_DISCONNECTED_UNEXPECTEDLY",
+                        details = "Laptop connection closed unexpectedly ($reason).",
+                        severity = "WARNING",
+                        connStatus = "Connection Lost"
+                    )
+                }
             },
             onFrameReceived = { frame ->
                 handleWebSocketFrame(frame)
@@ -318,8 +534,26 @@ class DefenceIqRepository(
     }
 
     private fun handleWebSocketFrame(frame: WebSocketAlertFrame) {
+        recordHeartbeat("ws_frame")
         scope.launch {
             when (frame.type) {
+                "security_alert" -> {
+                    frame.securityAlert?.let { alert ->
+                        onSecurityAlert(alert)
+                    }
+                }
+                "connection_status" -> {
+                    frame.connectionStatus?.let { statusStr ->
+                        when (statusStr) {
+                            "Connected" -> _connectionState.value = ConnectionStatus.CONNECTED
+                            "Connection Lost" -> _connectionState.value = ConnectionStatus.CONNECTION_LOST
+                            "Laptop Offline" -> _connectionState.value = ConnectionStatus.LAPTOP_OFFLINE
+                            "Connecting" -> _connectionState.value = ConnectionStatus.CONNECTING
+                            "Disconnected" -> _connectionState.value = ConnectionStatus.DISCONNECTED
+                        }
+                    }
+                    frame.lastSeen?.let { _lastSeen.value = it }
+                }
                 "incident" -> {
                     frame.incident?.let { newInc ->
                         val current = _incidents.value.toMutableList()
@@ -362,9 +596,34 @@ class DefenceIqRepository(
             val res = service.getStatus(getAuthHeader())
             if (res.isSuccessful && res.body() != null) {
                 _agentStatus.value = res.body()!!
+                recordHeartbeat("rest_status")
+                res.body()?.lastSeen?.let { _lastSeen.value = it }
+                res.body()?.lastConnected?.let { _lastConnected.value = it }
                 Result.success(res.body()!!)
             } else {
                 Result.failure(Exception("Status query failed: HTTP ${res.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun refreshSecurityAlerts(): Result<List<SecurityAlert>> = withContext(Dispatchers.IO) {
+        val service = apiService ?: return@withContext Result.failure(Exception("Not connected"))
+        try {
+            val res = service.getSecurityAlerts(getAuthHeader())
+            if (res.isSuccessful && res.body() != null) {
+                val alerts = res.body()!!.alerts
+                val current = _securityAlerts.value.toMutableList()
+                alerts.forEach { remote ->
+                    if (current.none { it.id == remote.id }) {
+                        current.add(remote)
+                    }
+                }
+                _securityAlerts.value = current.sortedByDescending { it.timestamp }.take(100)
+                Result.success(_securityAlerts.value)
+            } else {
+                Result.failure(Exception("Alerts query failed: HTTP ${res.code()}"))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -377,6 +636,7 @@ class DefenceIqRepository(
             val res = service.getIncidents(getAuthHeader(), limit = 50)
             if (res.isSuccessful && res.body() != null) {
                 _incidents.value = res.body()!!.incidents
+                recordHeartbeat("rest_incidents")
                 Result.success(res.body()!!.incidents)
             } else {
                 Result.failure(Exception("Incidents query failed: HTTP ${res.code()}"))
@@ -392,6 +652,7 @@ class DefenceIqRepository(
             val res = service.getQuarantine(getAuthHeader())
             if (res.isSuccessful && res.body() != null) {
                 _quarantinedFiles.value = res.body()!!.quarantinedFiles
+                recordHeartbeat("rest_quarantine")
                 Result.success(res.body()!!.quarantinedFiles)
             } else {
                 Result.failure(Exception("Quarantine query failed: HTTP ${res.code()}"))
@@ -482,9 +743,31 @@ class DefenceIqRepository(
         }
     }
 
+    fun revokePairing() {
+        val service = apiService
+        if (service != null) {
+            scope.launch(Dispatchers.IO) {
+                try {
+                    service.revokePairing(getAuthHeader())
+                } catch (e: Exception) {
+                    Log.d(tag, "Revoke endpoint call: ${e.message}")
+                }
+            }
+        }
+        emitSecurityAlert(
+            eventType = "DEVICE_REVOKED",
+            details = "Device pairing was explicitly revoked and security credentials cleared.",
+            severity = "WARNING",
+            connStatus = "Disconnected"
+        )
+        unpair()
+    }
+
     fun unpair() {
         cloudRelay.unpair()
         disconnect()
+        _mobilePairingToken.value = null
+        _mobileTokenExpiresAt.value = 0L
     }
 
     fun disconnect() {

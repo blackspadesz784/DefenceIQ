@@ -69,4 +69,20 @@ interface DefenceIqApiService {
     suspend fun getTransports(
         @Header("Authorization") authHeader: String
     ): Response<TransportsResponse>
+
+    @GET("/pairing/status")
+    suspend fun getPairingStatus(): Response<PairingStatusResponse>
+
+    @POST("/token/generate")
+    suspend fun generateToken(): Response<GenerateTokenResponse>
+
+    @GET("/security/alerts")
+    suspend fun getSecurityAlerts(
+        @Header("Authorization") authHeader: String
+    ): Response<SecurityAlertsResponse>
+
+    @POST("/revoke-pairing")
+    suspend fun revokePairing(
+        @Header("Authorization") authHeader: String
+    ): Response<Map<String, Any>>
 }

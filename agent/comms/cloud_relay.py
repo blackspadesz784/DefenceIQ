@@ -525,6 +525,19 @@ class CloudRelay:
             push_title=f"DefenceIQ: Laptop {state.capitalize()}" if state in ("SHUTDOWN", "SLEEP") else None,
         )
 
+    def publish_security_alert(self, alert_data: Dict[str, Any]) -> bool:
+        """Publishes critical security alert (device connection change, auth failure, unknown device)."""
+        ev_title = alert_data.get("event_type", "SECURITY_ALERT").replace("_", " ").title()
+        dev = alert_data.get("device_name", "Device")
+        title = f"Security Alert: {ev_title} ({dev})"
+        self._sent_alerts.append(alert_data)
+        return self._send_envelope(
+            msg_type="SECURITY_ALERT",
+            data=alert_data,
+            priority="high",
+            push_title=title,
+        )
+
     def rotate_token(self, new_token: Optional[str] = None) -> str:
         """Rotates pairing token and security secrets, revoking older credentials."""
         if not new_token:

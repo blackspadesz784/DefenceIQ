@@ -36,9 +36,14 @@ fun DashboardScreen(
     val connectionState by repository.connectionState.collectAsState()
     val status by repository.agentStatus.collectAsState()
     val pairedDevice by repository.pairedDevice.collectAsState()
+    val lastSeen by repository.lastSeen.collectAsState()
+    val lastConnected by repository.lastConnected.collectAsState()
+    val securityAlerts by repository.securityAlerts.collectAsState()
+
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
     var isUpdatingLevel by remember { mutableStateOf(false) }
+    var showUnpairConfirmDialog by remember { mutableStateOf(false) }
 
     val sysMetrics = status?.systemMetrics
     val activeWin = status?.activeWindow
@@ -46,36 +51,27 @@ fun DashboardScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBackground)
+            .background(LightBackground)
             .verticalScroll(scrollState)
             .padding(16.dp)
     ) {
-        // Top Connection Banner
+        // Top Connection & Header Bar
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(DarkSurface)
-                    .border(1.dp, BorderColor, RoundedCornerShape(20.dp))
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(if (connectionState == ConnectionStatus.CONNECTED) NeonGreen else BandRed)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
+            Column {
                 Text(
-                    text = if (connectionState == ConnectionStatus.CONNECTED) "Connected (Live)" else "Offline / Disconnected",
+                    text = "DefenceIQ",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = TextPrimary
+                )
+                Text(
+                    text = "Endpoint Protection & Live Monitoring",
                     fontSize = 12.sp,
-                    color = TextPrimary,
-                    fontWeight = FontWeight.Medium
+                    color = TextSecondary
                 )
             }
 
@@ -85,50 +81,339 @@ fun DashboardScreen(
                         repository.tryLocalAutoConnect()
                         repository.refreshStatus()
                         repository.refreshIncidents()
+                        repository.refreshSecurityAlerts()
                     }
                 }
             ) {
-                Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = CyberBlue)
+                Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = PrimaryBlue)
             }
         }
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // Paired Device Information Card
+        // =========================================================================
+        // 1. CONNECTION DASHBOARD CARD (Requirements #1, #7, #6)
+        // =========================================================================
+        val (statusColor, statusBg, statusIcon, statusText) = when (connectionState) {
+            ConnectionStatus.CONNECTED -> Quadruple(
+                BandGreen,
+                BandGreen.copy(alpha = 0.1f),
+                Icons.Default.CheckCircle,
+                "Connected"
+            )
+            ConnectionStatus.CONNECTING -> Quadruple(
+                BandYellow,
+                BandYellow.copy(alpha = 0.1f),
+                Icons.Default.Sync,
+                "Connecting"
+            )
+            ConnectionStatus.CONNECTION_LOST -> Quadruple(
+                BandOrange,
+                BandOrange.copy(alpha = 0.1f),
+                Icons.Default.WifiOff,
+                "Connection Lost"
+            )
+            ConnectionStatus.LAPTOP_OFFLINE -> Quadruple(
+                BandRed,
+                BandRed.copy(alpha = 0.1f),
+                Icons.Default.PowerSettingsNew,
+                "Laptop Offline"
+            )
+            ConnectionStatus.DISCONNECTED -> Quadruple(
+                TextSecondary,
+                LightSurfaceVariant,
+                Icons.Default.LinkOff,
+                "Disconnected"
+            )
+        }
+
+        val deviceName = status?.hostname?.ifEmpty { null }
+            ?: (pairedDevice?.hostname?.ifEmpty { null } ?: "Host Laptop")
+        val deviceType = status?.deviceType ?: "Windows Workstation"
+        val lanIp = status?.lanIp?.ifEmpty { null }
+            ?: (pairedDevice?.isCloudRelay?.let { if (it) "Cloud Relay (Global)" else "Local Wi-Fi" } ?: "127.0.0.1")
+
         Card(
-            colors = CardDefaults.cardColors(containerColor = DarkSurface),
+            colors = CardDefaults.cardColors(containerColor = LightSurface),
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, BorderColor, RoundedCornerShape(14.dp))
+                .border(1.dp, LightBorderColor, RoundedCornerShape(14.dp))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
+                // Header with Laptop Icon, Name, and Status Badge
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text(
-                            text = pairedDevice?.hostname ?: (status?.hostname ?: "My Laptop"),
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(LightSurfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Laptop,
+                                contentDescription = "Laptop",
+                                tint = PrimaryBlue,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = deviceName,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = deviceType,
+                                fontSize = 11.sp,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+
+                    // Real-Time Live Status Pill
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(statusBg)
+                            .border(1.dp, statusColor.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(statusColor)
                         )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Icon(
+                            imageVector = statusIcon,
+                            contentDescription = null,
+                            tint = statusColor,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "ID: ${pairedDevice?.deviceId ?: "LAPTOP-LINKED"}",
+                            text = statusText,
                             fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = statusColor
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                Divider(color = LightBorderColor)
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Network and Timing Metadata Grid
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Lan, contentDescription = null, tint = TextMuted, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(text = "Network / IP", fontSize = 11.sp, color = TextSecondary)
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = lanIp,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
                             fontFamily = FontFamily.Monospace,
-                            color = CyberBlue
+                            color = TextPrimary
                         )
                     }
 
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.AccessTime, contentDescription = null, tint = TextMuted, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(text = "Last Seen", fontSize = 11.sp, color = TextSecondary)
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = lastSeen.ifEmpty { "Active Now" },
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            fontFamily = FontFamily.Monospace,
+                            color = if (connectionState == ConnectionStatus.CONNECTED) BandGreen else BandOrange
+                        )
+                    }
+                }
+
+                if (connectionState != ConnectionStatus.CONNECTED && lastConnected.isNotEmpty() && lastConnected != "Never") {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.History, contentDescription = null, tint = TextMuted, modifier = Modifier.size(13.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Last Connected: $lastConnected",
+                            fontSize = 11.sp,
+                            color = TextMuted
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Unpair / Revoke Action
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
                     OutlinedButton(
-                        onClick = { repository.unpair() },
+                        onClick = { showUnpairConfirmDialog = true },
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = BandRed),
                         modifier = Modifier.height(32.dp),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                     ) {
-                        Text("Unpair", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.LinkOff, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Revoke / Unpair", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+        }
+
+        // Unpair Confirmation Dialog
+        if (showUnpairConfirmDialog) {
+            AlertDialog(
+                onDismissRequest = { showUnpairConfirmDialog = false },
+                title = { Text("Unpair Laptop?", fontWeight = FontWeight.Bold) },
+                text = { Text("Are you sure you want to revoke pairing with $deviceName? You will need to enter a fresh pairing token to reconnect.") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showUnpairConfirmDialog = false
+                            repository.revokePairing()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = BandRed)
+                    ) {
+                        Text("Unpair Device")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showUnpairConfirmDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // =========================================================================
+        // 2. AUTOMATIC SECURITY ALERTS SUMMARY (Requirement #2)
+        // =========================================================================
+        val recentSecurityAlert = securityAlerts.firstOrNull()
+        Card(
+            colors = CardDefaults.cardColors(containerColor = LightSurface),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, LightBorderColor, RoundedCornerShape(14.dp))
+                .clickable { onNavigateToAlerts() }
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Security,
+                            contentDescription = null,
+                            tint = PrimaryBlue,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "SECURITY EVENT MONITOR",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryBlue,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(LightSurfaceVariant)
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "${securityAlerts.size} Alerts",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (recentSecurityAlert != null) {
+                    val alertSeverityColor = when (recentSecurityAlert.severity) {
+                        "CRITICAL" -> BandRed
+                        "WARNING" -> BandYellow
+                        else -> PrimaryBlue
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.Top,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 2.dp)
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(alertSeverityColor)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = recentSecurityAlert.eventType.replace('_', ' '),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = recentSecurityAlert.details,
+                                fontSize = 11.sp,
+                                color = TextSecondary,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "${recentSecurityAlert.timestamp} • Status: ${recentSecurityAlert.connectionStatus}",
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                color = TextMuted
+                            )
+                        }
+                    }
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = BandGreen, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "No unauthorized connection attempts or unexpected disconnects detected.",
+                            fontSize = 11.sp,
+                            color = TextSecondary
+                        )
                     }
                 }
             }
@@ -136,109 +421,56 @@ fun DashboardScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Main Security Status Banner
+        // =========================================================================
+        // 3. MAIN ENDPOINT HEALTH STATE BANNER
+        // =========================================================================
         val health = status?.healthState ?: "SECURE"
         val (badgeColor, healthIcon) = when (health) {
-            "SECURE" -> Pair(BandGreen, Icons.Default.Shield)
+            "SECURE" -> Pair(BandGreen, Icons.Default.Security)
             "WARNING" -> Pair(BandYellow, Icons.Default.Warning)
-            "ELEVATED_RISK" -> Pair(BandOrange, Icons.Default.CrisisAlert)
-            "CRITICAL_THREAT" -> Pair(BandRed, Icons.Default.GppBad)
-            else -> Pair(TextSecondary, Icons.Default.Shield)
+            "ELEVATED_RISK" -> Pair(BandOrange, Icons.Default.Warning)
+            "CRITICAL_THREAT" -> Pair(BandRed, Icons.Default.Error)
+            else -> Pair(TextSecondary, Icons.Default.Security)
         }
 
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, badgeColor.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
-            colors = CardDefaults.cardColors(containerColor = DarkSurface)
+                .border(1.dp, badgeColor.copy(alpha = 0.3f), RoundedCornerShape(14.dp)),
+            colors = CardDefaults.cardColors(containerColor = LightSurface)
         ) {
             Column(
-                modifier = Modifier.padding(20.dp),
+                modifier = Modifier.padding(18.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Icon(
                     imageVector = healthIcon,
                     contentDescription = null,
                     tint = badgeColor,
-                    modifier = Modifier.size(56.dp)
+                    modifier = Modifier.size(46.dp)
                 )
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = health.replace("_", " "),
-                    fontSize = 22.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = badgeColor,
-                    letterSpacing = 1.sp
+                    letterSpacing = 0.5.sp
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "AI Threat Scorer & Process/File Watchers Active",
-                    fontSize = 12.sp,
+                    text = "Autonomous AI Threat Scorer & Process/File Watchers Active",
+                    fontSize = 11.sp,
                     color = TextSecondary
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
-        // Authorized Monitoring Scope Card
-        Card(
-            colors = CardDefaults.cardColors(containerColor = DarkSurface),
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, BorderColor, RoundedCornerShape(14.dp))
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "AUTHORIZED MONITORING SCOPE",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = CyberBlue,
-                        letterSpacing = 1.sp
-                    )
-                    Text(
-                        text = "LEAST PRIVILEGE",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = NeonGreen
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                val paths = pairedDevice?.authorizedPaths?.ifEmpty { null }
-                    ?: listOf("Downloads", "Desktop", "Documents", "Startup autorun keys")
-
-                paths.take(4).forEach { p ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(vertical = 2.dp)
-                    ) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = NeonGreen, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = p.substringAfterLast("\\").ifEmpty { p }, fontSize = 12.sp, color = TextPrimary)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Zero Content Transmission: Telemetry strictly monitors process metadata, hashes & entropy. File contents are never exposed.",
-                    fontSize = 11.sp,
-                    color = TextSecondary,
-                    lineHeight = 15.sp
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Protection Level Selector
+        // =========================================================================
+        // 4. PROTECTION LEVEL SELECTOR
+        // =========================================================================
         Text(
             text = "PROTECTION LEVEL",
             fontSize = 11.sp,
@@ -257,11 +489,15 @@ fun DashboardScreen(
                 val isSelected = currentLevel.equals(level, ignoreCase = true)
                 Card(
                     colors = CardDefaults.cardColors(
-                        containerColor = if (isSelected) NeonGreen else DarkSurface
+                        containerColor = if (isSelected) PrimaryBlue else LightSurface
                     ),
                     modifier = Modifier
                         .weight(1f)
-                        .border(1.dp, if (isSelected) NeonGreen else BorderColor, RoundedCornerShape(10.dp))
+                        .border(
+                            1.dp,
+                            if (isSelected) PrimaryBlue else LightBorderColor,
+                            RoundedCornerShape(10.dp)
+                        )
                         .clickable(enabled = !isUpdatingLevel) {
                             if (!isSelected) {
                                 isUpdatingLevel = true
@@ -275,80 +511,30 @@ fun DashboardScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 12.dp),
+                            .padding(vertical = 10.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = level.uppercase(),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isSelected) DarkBackground else TextPrimary
+                            color = if (isSelected) Color.White else TextPrimary
                         )
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        // Telemetry Metrics Grid
+        // =========================================================================
+        // 5. HARDWARE GAUGES (CPU, RAM, Storage, Battery)
+        // =========================================================================
         Text(
-            text = "SYSTEM TELEMETRY",
+            text = "HARDWARE GAUGES",
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             color = TextSecondary,
-            letterSpacing = 1.sp
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            MetricCard(
-                title = "Monitored PIDs",
-                value = status?.monitoredPidsCount?.toString() ?: "0",
-                icon = Icons.Default.Memory,
-                modifier = Modifier.weight(1f)
-            )
-            MetricCard(
-                title = "Active Sockets",
-                value = status?.activeSocketsCount?.toString() ?: "0",
-                icon = Icons.Default.Language,
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            MetricCard(
-                title = "Incidents",
-                value = repository.incidents.collectAsState().value.size.toString(),
-                icon = Icons.Default.NotificationsActive,
-                modifier = Modifier.weight(1f).clickable { onNavigateToAlerts() }
-            )
-            MetricCard(
-                title = "Actions Taken",
-                value = status?.stats?.totalActions?.toString() ?: "0",
-                icon = Icons.Default.Gavel,
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // =========================================================================
-        // REAL-TIME SYSTEM PERFORMANCE MONITORING (Web Companion Parity)
-        // =========================================================================
-        Text(
-            text = "REAL-TIME HARDWARE GAUGES",
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            color = CyberBlue,
             letterSpacing = 1.sp
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -368,8 +554,8 @@ fun DashboardScreen(
                 title = "CPU LOAD",
                 percent = cpuPercent,
                 valueText = "${cpuPercent}%",
-                icon = Icons.Default.Speed,
-                iconTint = CyberBlue,
+                icon = Icons.Default.Memory,
+                iconTint = PrimaryBlue,
                 details = listOf(
                     "Cores" to "$physCores P / $logCores L",
                     "Clock" to "${cpuFreq.toInt()} MHz",
@@ -387,8 +573,8 @@ fun DashboardScreen(
                 title = "RAM USAGE",
                 percent = ramPercent,
                 valueText = "${ramPercent}%",
-                icon = Icons.Default.Memory,
-                iconTint = NeonGreen,
+                icon = Icons.Default.Storage,
+                iconTint = BandGreen,
                 details = listOf(
                     "Used" to "${ramUsed} GB",
                     "Total" to "${ramTotal} GB",
@@ -412,10 +598,10 @@ fun DashboardScreen(
             val diskWrite = sysMetrics?.disk?.writeSpeedKbps ?: 0.0
 
             HardwareGaugeCard(
-                title = "DISK STORAGE",
+                title = "STORAGE",
                 percent = diskPercent,
                 valueText = "${diskPercent}%",
-                icon = Icons.Default.Storage,
+                icon = Icons.Default.SdStorage,
                 iconTint = BandYellow,
                 details = listOf(
                     "Free" to "${diskFree} GB",
@@ -428,103 +614,44 @@ fun DashboardScreen(
             val battPercent = sysMetrics?.battery?.percent ?: 100.0
             val isPlugged = sysMetrics?.battery?.plugged ?: true
             val battHealth = sysMetrics?.battery?.health ?: "Good"
-            val battTime = sysMetrics?.battery?.timeLeft ?: "Full / AC Power"
+            val battTime = sysMetrics?.battery?.timeLeft ?: "AC Power"
 
             HardwareGaugeCard(
                 title = "BATTERY",
                 percent = battPercent,
                 valueText = "${battPercent.toInt()}%",
                 icon = if (isPlugged) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
-                iconTint = if (isPlugged) NeonGreen else BandYellow,
+                iconTint = if (isPlugged) BandGreen else BandYellow,
                 details = listOf(
-                    "Status" to if (isPlugged) "Charging ⚡" else "On Battery 🔋",
+                    "Status" to if (isPlugged) "Plugged In" else "On Battery",
                     "Health" to battHealth,
-                    "Remaining" to battTime
+                    "Time" to battTime
                 ),
                 modifier = Modifier.weight(1f),
                 isBattery = true
             )
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // GPU Acceleration Card
-        val gpu = sysMetrics?.gpu ?: GpuMetrics()
-        Card(
-            colors = CardDefaults.cardColors(containerColor = DarkSurface),
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
-        ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.DeveloperBoard, contentDescription = null, tint = CyberBlue, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "GPU ACCELERATION",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = CyberBlue,
-                            letterSpacing = 0.5.sp
-                        )
-                    }
-                    Text(
-                        text = gpu.status,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = NeonGreen,
-                        fontFamily = FontFamily.Monospace
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = gpu.name,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Text(
-                        text = "${gpu.vramMb.toInt()} MB VRAM",
-                        fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace,
-                        color = TextSecondary
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // =========================================================================
-        // NETWORK & INTERNET CONNECTIVITY
+        // 6. NETWORK & INTERNET SPEEDS
         // =========================================================================
         Text(
-            text = "NETWORK & INTERNET SPEEDS",
+            text = "NETWORK ACTIVITY",
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
-            color = CyberBlue,
+            color = TextSecondary,
             letterSpacing = 1.sp
         )
         Spacer(modifier = Modifier.height(8.dp))
 
         val net = sysMetrics?.network ?: NetworkMetrics()
         Card(
-            colors = CardDefaults.cardColors(containerColor = DarkSurface),
+            colors = CardDefaults.cardColors(containerColor = LightSurface),
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, BorderColor, RoundedCornerShape(14.dp))
+                .border(1.dp, LightBorderColor, RoundedCornerShape(14.dp))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
@@ -537,14 +664,14 @@ fun DashboardScreen(
                             modifier = Modifier
                                 .size(8.dp)
                                 .clip(CircleShape)
-                                .background(if (net.internetConnected) NeonGreen else BandRed)
+                                .background(if (net.internetConnected) BandGreen else BandRed)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (net.internetConnected) "Internet Reachable 🌐" else "Offline / No Route",
+                            text = if (net.internetConnected) "Internet Connected" else "No Route",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = if (net.internetConnected) NeonGreen else BandRed
+                            color = if (net.internetConnected) BandGreen else BandRed
                         )
                     }
 
@@ -556,21 +683,19 @@ fun DashboardScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                // Speeds Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Download Speed
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.ArrowDownward, contentDescription = null, tint = NeonGreen, modifier = Modifier.size(24.dp))
+                        Icon(Icons.Default.Download, contentDescription = null, tint = BandGreen, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
                                 text = "${net.downloadSpeedKbps} KB/s",
-                                fontSize = 16.sp,
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary,
                                 fontFamily = FontFamily.Monospace
@@ -579,14 +704,13 @@ fun DashboardScreen(
                         }
                     }
 
-                    // Upload Speed
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.ArrowUpward, contentDescription = null, tint = CyberBlue, modifier = Modifier.size(24.dp))
+                        Icon(Icons.Default.Upload, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
                                 text = "${net.uploadSpeedKbps} KB/s",
-                                fontSize = 16.sp,
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary,
                                 fontFamily = FontFamily.Monospace
@@ -596,9 +720,9 @@ fun DashboardScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
-                Divider(color = BorderColor.copy(alpha = 0.5f))
                 Spacer(modifier = Modifier.height(10.dp))
+                Divider(color = LightBorderColor)
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -620,122 +744,35 @@ fun DashboardScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // =========================================================================
-        // DEVICE SPECIFICATIONS & UPTIME
-        // =========================================================================
-        Text(
-            text = "DEVICE & OPERATING SYSTEM",
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            color = CyberBlue,
-            letterSpacing = 1.sp
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        val sysInfo = sysMetrics?.systemInfo ?: SystemInfoMetrics()
-        Card(
-            colors = CardDefaults.cardColors(containerColor = DarkSurface),
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, BorderColor, RoundedCornerShape(14.dp))
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Computer, contentDescription = null, tint = CyberBlue, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = sysInfo.deviceName.ifEmpty { pairedDevice?.hostname ?: "My Laptop" },
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                    }
-
-                    // Uptime pill
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(DarkSurfaceVariant)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Icon(Icons.Default.Timer, contentDescription = null, tint = NeonGreen, modifier = Modifier.size(12.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Up: ${sysInfo.uptime.ifEmpty { "14h 30m" }}",
-                            fontSize = 11.sp,
-                            fontFamily = FontFamily.Monospace,
-                            color = NeonGreen
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(text = "Operating System:", fontSize = 11.sp, color = TextSecondary)
-                        Text(text = sysInfo.osName, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(text = "OS Build Version:", fontSize = 11.sp, color = TextSecondary)
-                        Text(text = sysInfo.build.ifEmpty { "10.0.26200" }, fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = TextPrimary)
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(text = "Processor:", fontSize = 11.sp, color = TextSecondary)
-                        Text(
-                            text = sysInfo.processor.ifEmpty { "Intel Core i5" }.take(32),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(text = "Architecture:", fontSize = 11.sp, color = TextSecondary)
-                        Text(text = sysInfo.architecture.ifEmpty { "AMD64 / x86_64" }, fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = CyberBlue)
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // =========================================================================
-        // ACTIVE FOREGROUND WINDOW / APPLICATION GLANCE
+        // 7. ACTIVE APPLICATION GLANCE
         // =========================================================================
         if (activeWin != null && (!activeWin.appName.isNullOrEmpty() || !activeWin.windowTitle.isNullOrEmpty())) {
             Text(
                 text = "ACTIVE DESKTOP APPLICATION",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = CyberBlue,
+                color = TextSecondary,
                 letterSpacing = 1.sp
             )
             Spacer(modifier = Modifier.height(8.dp))
 
             Card(
-                colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                colors = CardDefaults.cardColors(containerColor = LightSurface),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, CyberBlue.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
+                    .border(1.dp, LightBorderColor, RoundedCornerShape(14.dp))
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(14.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Apps, contentDescription = null, tint = CyberBlue, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Laptop, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = activeWin.appName ?: activeWin.processName ?: "Active Application",
@@ -747,50 +784,31 @@ fun DashboardScreen(
 
                         if (activeWin.durationSeconds > 0) {
                             Text(
-                                text = "⏱️ ${activeWin.durationSeconds}s",
+                                text = "${activeWin.durationSeconds}s",
                                 fontSize = 11.sp,
                                 fontFamily = FontFamily.Monospace,
-                                color = NeonGreen
+                                color = TextSecondary
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
                         text = activeWin.tabTitle ?: activeWin.windowTitle ?: "--",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
+                        fontSize = 12.sp,
                         color = TextPrimary,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
-
-                    if (!activeWin.urlDomain.isNullOrEmpty()) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(BandYellow.copy(alpha = 0.15f))
-                                .border(1.dp, BandYellow.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
-                                .padding(horizontal = 8.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = activeWin.urlDomain,
-                                fontSize = 11.sp,
-                                fontFamily = FontFamily.Monospace,
-                                color = BandYellow
-                            )
-                        }
-                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
         // =========================================================================
-        // TOP RUNNING PROCESSES
+        // 8. TOP RUNNING APPLICATIONS
         // =========================================================================
         val topProcesses = sysMetrics?.topProcesses ?: emptyList()
         if (topProcesses.isNotEmpty()) {
@@ -798,16 +816,16 @@ fun DashboardScreen(
                 text = "TOP RUNNING APPLICATIONS",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = CyberBlue,
+                color = TextSecondary,
                 letterSpacing = 1.sp
             )
             Spacer(modifier = Modifier.height(8.dp))
 
             Card(
-                colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                colors = CardDefaults.cardColors(containerColor = LightSurface),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, BorderColor, RoundedCornerShape(14.dp))
+                    .border(1.dp, LightBorderColor, RoundedCornerShape(14.dp))
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Row(
@@ -827,7 +845,7 @@ fun DashboardScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 5.dp),
+                                .padding(vertical = 4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -862,19 +880,19 @@ fun DashboardScreen(
                                     text = "${proc.memoryMb.toInt()} MB",
                                     fontSize = 12.sp,
                                     fontFamily = FontFamily.Monospace,
-                                    color = CyberBlue
+                                    color = PrimaryBlue
                                 )
                             }
                         }
                         if (proc != topProcesses.take(6).last()) {
-                            Divider(color = BorderColor.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 2.dp))
+                            Divider(color = LightBorderColor.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 2.dp))
                         }
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -893,7 +911,7 @@ fun HardwareGaugeCard(
         when {
             percent <= 20.0 -> BandRed
             percent <= 40.0 -> BandYellow
-            else -> NeonGreen
+            else -> BandGreen
         }
     } else {
         when {
@@ -904,8 +922,8 @@ fun HardwareGaugeCard(
     }
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = DarkSurface),
-        modifier = modifier.border(1.dp, BorderColor, RoundedCornerShape(12.dp))
+        colors = CardDefaults.cardColors(containerColor = LightSurface),
+        modifier = modifier.border(1.dp, LightBorderColor, RoundedCornerShape(12.dp))
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(
@@ -927,7 +945,7 @@ fun HardwareGaugeCard(
 
             Text(
                 text = valueText,
-                fontSize = 22.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.ExtraBold,
                 fontFamily = FontFamily.Monospace,
                 color = barColor
@@ -942,10 +960,10 @@ fun HardwareGaugeCard(
                     .height(5.dp)
                     .clip(RoundedCornerShape(3.dp)),
                 color = barColor,
-                trackColor = DarkSurfaceVariant
+                trackColor = LightSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 details.forEach { (label, value) ->
@@ -968,22 +986,4 @@ fun HardwareGaugeCard(
     }
 }
 
-@Composable
-fun MetricCard(
-    title: String,
-    value: String,
-    icon: ImageVector,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = DarkSurface),
-        modifier = modifier.border(1.dp, BorderColor, RoundedCornerShape(12.dp))
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Icon(icon, contentDescription = null, tint = CyberBlue, modifier = Modifier.size(20.dp))
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = value, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-            Text(text = title, fontSize = 11.sp, color = TextSecondary)
-        }
-    }
-}
+data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)

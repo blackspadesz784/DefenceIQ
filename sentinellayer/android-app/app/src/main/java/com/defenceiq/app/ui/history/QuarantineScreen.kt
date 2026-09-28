@@ -7,8 +7,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Archive
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.*
@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,7 +36,7 @@ fun QuarantineScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBackground)
+            .background(LightBackground)
             .padding(16.dp)
     ) {
         Row(
@@ -43,24 +44,30 @@ fun QuarantineScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "QUARANTINE VAULT",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary,
-                letterSpacing = 1.sp
-            )
+            Column {
+                Text(
+                    text = "Quarantine Vault",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+                Text(
+                    text = "Isolated suspicious files & reversible rollback",
+                    fontSize = 12.sp,
+                    color = TextSecondary
+                )
+            }
 
             IconButton(
                 onClick = {
                     coroutineScope.launch { repository.refreshQuarantine() }
                 }
             ) {
-                Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = CyberBlue)
+                Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = PrimaryBlue)
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         if (quarantinedFiles.isEmpty()) {
             Box(
@@ -71,9 +78,9 @@ fun QuarantineScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
-                        Icons.Default.Archive,
+                        Icons.Default.FolderOpen,
                         contentDescription = null,
-                        tint = TextSecondary,
+                        tint = TextMuted,
                         modifier = Modifier.size(48.dp)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
@@ -83,10 +90,11 @@ fun QuarantineScreen(
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "No suspicious files are currently quarantined.",
                         color = TextSecondary,
-                        fontSize = 13.sp
+                        fontSize = 12.sp
                     )
                 }
             }
@@ -119,10 +127,10 @@ fun QuarantineItemCard(
     onRestore: () -> Unit
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+        colors = CardDefaults.cardColors(containerColor = LightSurface),
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
+            .border(1.dp, LightBorderColor, RoundedCornerShape(12.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -141,14 +149,14 @@ fun QuarantineItemCard(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(NeonGreen.copy(alpha = 0.2f))
+                            .background(BandGreen.copy(alpha = 0.1f))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
                             text = "RESTORED",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = NeonGreen
+                            color = BandGreen
                         )
                     }
                 }
@@ -177,15 +185,15 @@ fun QuarantineItemCard(
                     onClick = onRestore,
                     enabled = !isRestoring,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = NeonGreen,
-                        contentColor = DarkBackground
+                        containerColor = PrimaryBlue,
+                        contentColor = Color.White
                     ),
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     if (isRestoring) {
                         CircularProgressIndicator(
-                            color = DarkBackground,
+                            color = Color.White,
                             modifier = Modifier.size(16.dp),
                             strokeWidth = 2.dp
                         )

@@ -40,9 +40,9 @@ class DefenceIqRepository(
     private val gson = Gson()
 
     // Host & Auth credentials
-    var host: String = "192.168.137.1"
+    var host: String = "defenceiq.onrender.com"
         private set
-    var port: Int = 8765
+    var port: Int = 443
         private set
     var token: String = "DIQ-FUXN-G8CE"
         private set
@@ -142,18 +142,19 @@ class DefenceIqRepository(
      */
     suspend fun tryLocalAutoConnect(preferredToken: String? = null): Boolean = withContext(Dispatchers.IO) {
         val tok = (preferredToken ?: token).trim().uppercase()
-        val candidateHosts = listOf("127.0.0.1", "192.168.137.1", "192.168.14.236", "192.168.14.237", host, "10.0.2.2")
-        val candidateTokens = listOf(tok, "DIQ-FUXN-G8CE", "11C6C497", "DIQ-Z4LQ-BXUJ")
+        val candidateHosts = listOf("defenceiq.onrender.com", "192.168.137.1", "127.0.0.1", "192.168.14.236", "192.168.14.237")
+        val candidateTokens = listOf(tok, "DIQ-FUXN-G8CE", "11C6C497")
         for (h in candidateHosts) {
+            val targetPort = if (h.contains("onrender.com")) 443 else 8765
             for (t in candidateTokens) {
                 try {
-                    val res = pairAndConnect(h, port, t)
+                    val res = pairAndConnect(h, targetPort, t)
                     if (res.isSuccess) {
-                        Log.i(tag, "Successfully connected to $h:$port with token $t")
+                        Log.i(tag, "Successfully connected to $h:$targetPort with token $t")
                         return@withContext true
                     }
                 } catch (e: Exception) {
-                    Log.d(tag, "Auto-connect attempt failed for $h:$port: ${e.message}")
+                    Log.d(tag, "Auto-connect attempt failed for $h:$targetPort: ${e.message}")
                 }
             }
         }
@@ -230,7 +231,17 @@ class DefenceIqRepository(
             port = targetPort
             token = pairingToken.trim().uppercase()
 
-            val baseUrl = "http://$host:$port/"
+            val isHttps = host.startsWith("https://") || host.contains("onrender.com") || port == 443
+            val cleanHost = host.trim()
+                .removePrefix("https://")
+                .removePrefix("http://")
+                .removeSuffix("/")
+
+            val baseUrl = if (isHttps) {
+                "https://$cleanHost/"
+            } else {
+                "http://$cleanHost:$port/"
+            }
             val retrofit = Retrofit.Builder()
                 .baseUrl(baseUrl)
                 .client(okHttpClient!!)
@@ -276,7 +287,15 @@ class DefenceIqRepository(
      */
     fun connectWebSocket() {
         webSocket?.cancel()
-        val wsUrl = "ws://$host:$port/ws/alerts?token=$token"
+        val isHttps = host.startsWith("https://") || host.contains("onrender.com") || port == 443
+        val cleanHost = host.trim()
+            .removePrefix("https://")
+            .removePrefix("http://")
+            .removeSuffix("/")
+
+        val wsScheme = if (isHttps) "wss" else "ws"
+        val wsPortPart = if (isHttps) "" else ":$port"
+        val wsUrl = "$wsScheme://$cleanHost$wsPortPart/ws/alerts?token=$token"
         val request = Request.Builder().url(wsUrl).build()
 
         val listener = AlertsWebSocketListener(

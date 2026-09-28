@@ -40,11 +40,11 @@ class DefenceIqRepository(
     private val gson = Gson()
 
     // Host & Auth credentials
-    var host: String = "192.168.1.4"
+    var host: String = "192.168.137.1"
         private set
     var port: Int = 8765
         private set
-    var token: String = "11C6C497"
+    var token: String = "DIQ-FUXN-G8CE"
         private set
 
     // Cloud Relay Client (IP-Independent)
@@ -142,8 +142,8 @@ class DefenceIqRepository(
      */
     suspend fun tryLocalAutoConnect(preferredToken: String? = null): Boolean = withContext(Dispatchers.IO) {
         val tok = (preferredToken ?: token).trim().uppercase()
-        val candidateHosts = listOf(host, "192.168.1.4", "127.0.0.1", "10.0.2.2", "localhost")
-        val candidateTokens = listOf(tok, "11C6C497", "DIQ-Z4LQ-BXUJ", "DIQ-FUXN-G8CE")
+        val candidateHosts = listOf("127.0.0.1", "192.168.137.1", "192.168.14.236", "192.168.14.237", host, "10.0.2.2")
+        val candidateTokens = listOf(tok, "DIQ-FUXN-G8CE", "11C6C497", "DIQ-Z4LQ-BXUJ")
         for (h in candidateHosts) {
             for (t in candidateTokens) {
                 try {

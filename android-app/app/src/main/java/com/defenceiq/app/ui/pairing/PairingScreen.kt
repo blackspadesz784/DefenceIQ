@@ -42,7 +42,7 @@ fun PairingScreen(
     val scrollState = rememberScrollState()
 
     var activeToken by remember { mutableStateOf(CloudRelayClient.generateToken()) }
-    var inputToken by remember { mutableStateOf("11C6C497") }
+    var inputToken by remember { mutableStateOf("DIQ-FUXN-G8CE") }
     var isListening by remember { mutableStateOf(false) }
 
     // Direct LAN fallback fields

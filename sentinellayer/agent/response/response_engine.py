@@ -8,6 +8,7 @@ and logged with automated rollback execution paths.
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 import logging
+import os
 from typing import Any, Dict, List, Optional
 
 from sentinellayer.agent.ai_engine.event_correlator import Incident
@@ -149,7 +150,10 @@ class ResponseEngine:
 
     def _apply_process_suspension(self, incident: Incident, actions: List[ResponseActionRecord]):
         """Reversibly suspends all involved processes."""
+        current_pid = os.getpid()
         for pid in incident.involved_pids:
+            if pid == current_pid:
+                continue
             res = self.processes.suspend_process(pid)
             actions.append(
                 ResponseActionRecord(
@@ -165,6 +169,8 @@ class ResponseEngine:
 
     def _apply_process_isolation(self, incident: Incident, actions: List[ResponseActionRecord]):
         """Isolates process tree by suspending remaining child processes."""
+        if incident.root_pid == os.getpid():
+            return
         res = self.processes.isolate_process(incident.root_pid)
         actions.append(
             ResponseActionRecord(

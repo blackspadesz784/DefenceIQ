@@ -49,13 +49,22 @@ class DefenceIqRepository(
     private val tag = "DefenceIqRepo"
     private val gson = Gson()
 
-    // Host & Auth credentials
-    var host: String = "defenceiq.onrender.com"
+    // Host & Auth credentials (Fixed Master Token: DIQ-EJFW-GC3V)
+    var host: String = "192.168.1.7"
         private set
-    var port: Int = 443
+    var port: Int = 8765
         private set
-    var token: String = "DIQ-FUXN-G8CE"
+    var token: String = "DIQ-EJFW-GC3V"
         private set
+
+    // Persistent Timeline & Date Events Tracking
+    private val _timelineEvents = MutableStateFlow<List<TimelineEventItem>>(emptyList())
+    val timelineEvents: StateFlow<List<TimelineEventItem>> = _timelineEvents.asStateFlow()
+    private val lastSeenApps = mutableMapOf<String, String>()
+    private val lastSeenDevices = mutableSetOf<String>()
+    // Discovered Laptops on Local Network
+    private val _discoveredLaptops = MutableStateFlow<List<DiscoveredLaptop>>(emptyList())
+    val discoveredLaptops: StateFlow<List<DiscoveredLaptop>> = _discoveredLaptops.asStateFlow()
 
     // Watchdog and timing
     private var lastHeartbeatTimeMs: Long = 0L
@@ -117,6 +126,111 @@ class DefenceIqRepository(
     private var okHttpClient: OkHttpClient? = null
     private var webSocket: WebSocket? = null
 
+    private val prefs = appContext?.getSharedPreferences("defenceiq_prefs", Context.MODE_PRIVATE)
+
+    // Paired status: persistent until user explicitly revokes/unpairs
+    private val _isPaired = MutableStateFlow<Boolean>(
+        prefs?.getBoolean("is_paired", false) == true || !prefs?.getString("last_host", null).isNullOrBlank()
+    )
+    val isPaired: StateFlow<Boolean> = _isPaired.asStateFlow()
+
+    private val timelineFile: java.io.File? by lazy {
+        appContext?.filesDir?.let { java.io.File(it, "defenceiq_timeline_history.json") }
+    }
+
+    private fun loadTimelineHistory() {
+        try {
+            val file = timelineFile ?: return
+            if (file.exists()) {
+                val jsonStr = file.readText(Charsets.UTF_8)
+                val type = object : com.google.gson.reflect.TypeToken<List<TimelineEventItem>>() {}.type
+                val items: List<TimelineEventItem>? = gson.fromJson(jsonStr, type)
+                if (!items.isNullOrEmpty()) {
+                    _timelineEvents.value = items
+                    return
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(tag, "Failed to load timeline history: ${e.message}")
+        }
+        val now = Date()
+        val dStr = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(now)
+        val tStr = SimpleDateFormat("hh:mm:ss a", Locale.getDefault()).format(now)
+        _timelineEvents.value = listOf(
+            TimelineEventItem(
+                dateStr = dStr,
+                timeStr = tStr,
+                category = "SYSTEM",
+                title = "DefenceIQ Timeline Logging Active",
+                details = "Time and date tracking active. All laptop events, open apps, and connected devices are securely saved on phone.",
+                status = "Ready",
+                severity = "INFO"
+            )
+        )
+    }
+
+    private fun saveTimelineHistory() {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val file = timelineFile ?: return@launch
+                val jsonStr = gson.toJson(_timelineEvents.value)
+                file.writeText(jsonStr, Charsets.UTF_8)
+            } catch (e: Exception) {
+                Log.w(tag, "Failed to persist timeline history: ${e.message}")
+            }
+        }
+    }
+
+    fun addTimelineEvent(
+        category: String,
+        title: String,
+        details: String,
+        status: String = "",
+        severity: String = "INFO"
+    ) {
+        val now = Date()
+        val dStr = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(now)
+        val tStr = SimpleDateFormat("hh:mm:ss a", Locale.getDefault()).format(now)
+        val item = TimelineEventItem(
+            dateStr = dStr,
+            timeStr = tStr,
+            category = category,
+            title = title,
+            details = details,
+            status = status,
+            severity = severity
+        )
+        val updated = mutableListOf(item)
+        updated.addAll(_timelineEvents.value)
+        _timelineEvents.value = updated.take(500)
+        saveTimelineHistory()
+    }
+
+    fun clearTimelineHistory() {
+        _timelineEvents.value = emptyList()
+        scope.launch(Dispatchers.IO) {
+            try {
+                timelineFile?.delete()
+            } catch (e: Exception) {
+                Log.w(tag, "Could not delete timeline file: ${e.message}")
+            }
+        }
+    }
+
+    private fun saveConnectionDetails(saveHost: String, savePort: Int, saveToken: String) {
+        try {
+            prefs?.edit()
+                ?.putString("last_host", saveHost)
+                ?.putInt("last_port", savePort)
+                ?.putString("last_token", saveToken)
+                ?.putBoolean("is_paired", true)
+                ?.apply()
+            _isPaired.value = true
+        } catch (e: Exception) {
+            Log.w(tag, "Failed to save connection prefs: ${e.message}")
+        }
+    }
+
     init {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BASIC
@@ -127,6 +241,19 @@ class DefenceIqRepository(
             .writeTimeout(10, TimeUnit.SECONDS)
             .addInterceptor(logging)
             .build()
+
+        val savedTok = prefs?.getString("last_token", null)
+        if (!savedTok.isNullOrBlank()) {
+            token = savedTok
+        } else {
+            token = "DIQ-EJFW-GC3V"
+            saveConnectionDetails(host, port, token)
+        }
+
+        // Immediately start Cloud Relay listener with token so remote connection outside Wi-Fi stays connected!
+        cloudRelay.startListeningWithToken(token)
+
+        loadTimelineHistory()
 
         // Observe Cloud Relay pairedDevice state
         scope.launch {
@@ -173,10 +300,37 @@ class DefenceIqRepository(
             tryLocalAutoConnect()
         }
 
-        // Real-time telemetry auto-refresh loop (every 2.5 seconds when connected)
+        // Continuous auto-reconnect background loop:
+        // As soon as laptop is powered on or connects to network, phone detects and pairs automatically!
         scope.launch {
             while (isActive) {
-                delay(2500)
+                if (_connectionState.value != ConnectionStatus.CONNECTED) {
+                    try {
+                        tryLocalAutoConnect()
+                    } catch (e: Exception) {
+                        Log.d(tag, "Auto-reconnect tick: ${e.message}")
+                    }
+                }
+                delay(3000)
+            }
+        }
+
+        // Continuous UDP discovery loop: discovers all laptops running DefenceIQ on the Wi-Fi LAN
+        scope.launch(Dispatchers.IO) {
+            while (isActive) {
+                try {
+                    listenForUdpBeacon(2000)
+                } catch (e: Exception) {
+                    // Ignore timeout
+                }
+                delay(2000)
+            }
+        }
+
+        // Real-time telemetry auto-refresh loop (every 1.5 seconds for live responsiveness)
+        scope.launch {
+            while (isActive) {
+                delay(1500)
                 if (_connectionState.value == ConnectionStatus.CONNECTED && apiService != null) {
                     try {
                         refreshStatus()
@@ -203,6 +357,7 @@ class DefenceIqRepository(
                             severity = "WARNING",
                             connStatus = "Laptop Offline"
                         )
+                        addTimelineEvent("SYSTEM", "Laptop Offline / Powered Off", "No heartbeat signal received from laptop", "Offline", "WARNING")
                     } else if (elapsed > 12000) {
                         // More than 12s without heartbeat: mark Connection Lost
                         _connectionState.value = ConnectionStatus.CONNECTION_LOST
@@ -212,6 +367,7 @@ class DefenceIqRepository(
                             severity = "WARNING",
                             connStatus = "Connection Lost"
                         )
+                        addTimelineEvent("SYSTEM", "Connection Lost", "Connection dropped, auto-reconnecting...", "Reconnecting", "WARNING")
                     }
                 }
             }
@@ -310,13 +466,99 @@ class DefenceIqRepository(
         return errorBody?.takeIf { it.isNotBlank() && !it.contains("<html>") } ?: (e?.message ?: "Pairing failure. Please try again.")
     }
 
+    fun recordDiscoveredLaptop(hostname: String, ip: String, port: Int, tok: String) {
+        val now = System.currentTimeMillis()
+        val current = _discoveredLaptops.value.toMutableList()
+        current.removeAll { it.ip == ip || (now - it.lastSeenMs > 60_000L) }
+        current.add(0, DiscoveredLaptop(
+            hostname = hostname.ifBlank { "Laptop ($ip)" },
+            ip = ip,
+            port = port,
+            token = tok,
+            lastSeenMs = now
+        ))
+        _discoveredLaptops.value = current
+    }
+
     /**
-     * Attempts direct connection to local laptop agent over Wi-Fi / USB tunnel.
+     * Listens for local UDP beacon broadcast by the laptop agent on port 8766.
+     * Returns Triple(ip, port, token) if discovered.
+     */
+    private fun listenForUdpBeacon(timeoutMs: Int = 1500): Triple<String, Int, String>? {
+        var socket: java.net.DatagramSocket? = null
+        return try {
+            socket = java.net.DatagramSocket(null).apply {
+                reuseAddress = true
+                broadcast = true
+                bind(java.net.InetSocketAddress(8766))
+                soTimeout = timeoutMs
+            }
+            val buffer = ByteArray(1024)
+            val packet = java.net.DatagramPacket(buffer, buffer.size)
+            socket.receive(packet)
+            val msg = String(packet.data, 0, packet.length)
+            val json = org.json.JSONObject(msg)
+            if (json.optString("service") == "defenceiq") {
+                val ip = json.optString("ip").ifEmpty { packet.address?.hostAddress ?: "127.0.0.1" }
+                val port = json.optInt("port", 8765)
+                val tok = json.optString("token")
+                val hostname = json.optString("hostname", "Host Laptop")
+                recordDiscoveredLaptop(hostname, ip, port, tok)
+                Triple(ip, port, tok)
+            } else null
+        } catch (e: Exception) {
+            null
+        } finally {
+            try { socket?.close() } catch (ignored: Exception) {}
+        }
+    }
+
+    /**
+     * Attempts direct connection to local laptop agent over Wi-Fi / Hotspot / USB tunnel.
+     * Priority:
+     * 1. UDP Discovery Beacon (automatically finds laptop IP and pairing token on Wi-Fi/Hotspot)
+     * 2. Saved Host and Token from previous successful session
+     * 3. Hotspot gateway (192.168.137.1) and USB tunnel (127.0.0.1)
      */
     suspend fun tryLocalAutoConnect(preferredToken: String? = null): Boolean = withContext(Dispatchers.IO) {
         val tok = (preferredToken ?: token).trim().uppercase()
-        val candidateHosts = listOf("defenceiq.onrender.com", "192.168.137.1", "127.0.0.1", "192.168.14.236", "192.168.14.237")
-        val candidateTokens = listOf(tok, "DIQ-FUXN-G8CE", "11C6C497")
+
+        // 1. Listen for UDP broadcast beacon from laptop
+        val beacon = listenForUdpBeacon(1500)
+        if (beacon != null) {
+            val (bIp, bPort, bTok) = beacon
+            val tokenToUse = if (tok.isNotEmpty() && tok != "UNKNOWN") tok else bTok
+            try {
+                val res = pairAndConnect(bIp, bPort, tokenToUse)
+                if (res.isSuccess) {
+                    Log.i(tag, "Auto-connected via UDP Beacon to $bIp:$bPort")
+                    saveConnectionDetails(bIp, bPort, tokenToUse)
+                    return@withContext true
+                }
+            } catch (e: Exception) {
+                Log.d(tag, "Beacon connect error: ${e.message}")
+            }
+        }
+
+        // 2. Try saved host from previous session
+        val savedHost = prefs?.getString("last_host", null)
+        val savedPort = prefs?.getInt("last_port", 8765) ?: 8765
+        val savedTok = prefs?.getString("last_token", null) ?: tok
+        if (!savedHost.isNullOrBlank() && !savedTok.isNullOrBlank()) {
+            try {
+                val res = pairAndConnect(savedHost, savedPort, savedTok)
+                if (res.isSuccess) {
+                    Log.i(tag, "Auto-connected to saved host: $savedHost:$savedPort")
+                    return@withContext true
+                }
+            } catch (e: Exception) {
+                Log.d(tag, "Saved host connect error: ${e.message}")
+            }
+        }
+
+        // 3. Candidate hosts (Windows Hotspot default, USB ADB, common local IPs)
+        val candidateHosts = listOf("192.168.137.1", "127.0.0.1", "192.168.1.7", "192.168.0.7", "defenceiq.onrender.com")
+        val candidateTokens = listOf(tok, savedTok, "DIQ-EJFW-GC3V", "DIQ-FUXN-G8CE").filter { it.isNotBlank() }.distinct()
         for (h in candidateHosts) {
             val targetPort = if (h.contains("onrender.com")) 443 else 8765
             for (t in candidateTokens) {
@@ -324,6 +566,7 @@ class DefenceIqRepository(
                     val res = pairAndConnect(h, targetPort, t)
                     if (res.isSuccess) {
                         Log.i(tag, "Successfully connected to $h:$targetPort with token $t")
+                        saveConnectionDetails(h, targetPort, t)
                         return@withContext true
                     }
                 } catch (e: Exception) {
@@ -334,7 +577,7 @@ class DefenceIqRepository(
         false
     }
 
-    fun connectDirectLan(targetHost: String, targetPort: Int, pairingToken: String, onSuccess: () -> Unit) {
+    fun connectDirectLan(targetHost: String, targetPort: Int, pairingToken: String, onSuccess: () -> Unit = {}) {
         scope.launch {
             val res = pairAndConnect(targetHost, targetPort, pairingToken)
             if (res.isSuccess) {
@@ -478,6 +721,9 @@ class DefenceIqRepository(
                 deviceName = pairBody.hostname
             )
 
+            addTimelineEvent("SYSTEM", "Laptop Powered On & Connected", "Host workstation ${pairBody.hostname} (${pairBody.lanIp}) linked live.", "Connected", "SUCCESS")
+
+            saveConnectionDetails(cleanHost, port, token)
             Result.success(pairBody)
         } catch (e: Exception) {
             val friendly = mapErrorMessage(e)
@@ -595,11 +841,34 @@ class DefenceIqRepository(
         try {
             val res = service.getStatus(getAuthHeader())
             if (res.isSuccessful && res.body() != null) {
-                _agentStatus.value = res.body()!!
+                val st = res.body()!!
+                _agentStatus.value = st
                 recordHeartbeat("rest_status")
-                res.body()?.lastSeen?.let { _lastSeen.value = it }
-                res.body()?.lastConnected?.let { _lastConnected.value = it }
-                Result.success(res.body()!!)
+                st.lastSeen?.let { _lastSeen.value = it }
+                st.lastConnected?.let { _lastConnected.value = it }
+
+                // Timeline Tracking: Open Applications on Laptop
+                for (app in st.openApplications) {
+                    val prev = lastSeenApps[app.appName]
+                    if (app.isForeground && prev != "foreground") {
+                        lastSeenApps[app.appName] = "foreground"
+                        addTimelineEvent("APP", "${app.appName} Active Now", "${app.windowTitle.ifEmpty { app.appName }} (${app.category})", "In Use", "INFO")
+                    } else if (prev == null && app.isOpen) {
+                        lastSeenApps[app.appName] = "open"
+                        addTimelineEvent("APP", "${app.appName} Opened", "Launch: ${app.openedAt.ifEmpty { "Active" }} • ${app.processName}", "Running", "INFO")
+                    }
+                }
+
+                // Timeline Tracking: Connected Devices to Laptop
+                for (dev in st.connectedDevices) {
+                    val devKey = dev.id.ifEmpty { dev.name }
+                    if (!lastSeenDevices.contains(devKey) && dev.status.contains("Connect", true)) {
+                        lastSeenDevices.add(devKey)
+                        addTimelineEvent("DEVICE", "${dev.name} Connected", "${dev.connectionType} • ${dev.details ?: "Connected to laptop"}", dev.status, "SUCCESS")
+                    }
+                }
+
+                Result.success(st)
             } else {
                 Result.failure(Exception("Status query failed: HTTP ${res.code()}"))
             }
@@ -764,6 +1033,8 @@ class DefenceIqRepository(
     }
 
     fun unpair() {
+        prefs?.edit()?.clear()?.apply()
+        _isPaired.value = false
         cloudRelay.unpair()
         disconnect()
         _mobilePairingToken.value = null

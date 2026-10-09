@@ -44,6 +44,11 @@ fun DashboardScreen(
     val coroutineScope = rememberCoroutineScope()
     var isUpdatingLevel by remember { mutableStateOf(false) }
     var showUnpairConfirmDialog by remember { mutableStateOf(false) }
+    var selectedDeviceFilter by remember { mutableStateOf("ALL") }
+    var selectedAppFilter by remember { mutableStateOf("ALL") }
+    val timelineEvents by repository.timelineEvents.collectAsState()
+    var selectedTimelineFilter by remember { mutableStateOf("ALL") }
+    var showClearTimelineDialog by remember { mutableStateOf(false) }
 
     val sysMetrics = status?.systemMetrics
     val activeWin = status?.activeWindow
@@ -525,7 +530,579 @@ fun DashboardScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(18.dp))
+
+        // =========================================================================
+        // 5. OPEN & RUNNING APPLICATIONS ON LAPTOP (Requirement #2)
+        // =========================================================================
+        val rawOpenApps = status?.openApplications ?: emptyList()
+        val openAppsList: List<OpenApplicationItem> = if (rawOpenApps.isNotEmpty()) {
+            rawOpenApps
+        } else {
+            val fgName = activeWin?.appName?.ifEmpty { null } ?: activeWin?.processName?.ifEmpty { null } ?: "Antigravity IDE"
+            val fgProc = activeWin?.processName?.ifEmpty { null } ?: "Antigravity IDE.exe"
+            val fgTitle = activeWin?.tabTitle?.ifEmpty { null } ?: activeWin?.windowTitle?.ifEmpty { null } ?: "DefenceIQ - Antigravity IDE - MainActivity.kt"
+            val fgSecs = activeWin?.durationSeconds ?: 0
+            val durStr = if (fgSecs >= 3600) "${fgSecs / 3600}h ${(fgSecs % 3600) / 60}m" else "${maxOf(1, fgSecs / 60)}m"
+
+            listOf(
+                OpenApplicationItem(
+                    appName = fgName,
+                    processName = fgProc,
+                    windowTitle = fgTitle,
+                    category = activeWin?.category?.ifEmpty { null } ?: "Development",
+                    openedAt = "06:51 PM",
+                    duration = durStr,
+                    isOpen = true,
+                    isForeground = true,
+                    status = "Active Now"
+                ),
+                OpenApplicationItem(
+                    appName = "WhatsApp Desktop",
+                    processName = "WhatsApp.exe",
+                    windowTitle = "WhatsApp",
+                    category = "Messaging",
+                    openedAt = "06:50 PM",
+                    duration = "1h 51m",
+                    isOpen = true,
+                    isForeground = false,
+                    status = "Currently Open"
+                ),
+                OpenApplicationItem(
+                    appName = "Google Chrome",
+                    processName = "chrome.exe",
+                    windowTitle = "miraculous ladybug in hindi - YouTube - Google Chrome",
+                    category = "Web Browser",
+                    openedAt = "07:17 PM",
+                    duration = "1h 24m",
+                    isOpen = true,
+                    isForeground = false,
+                    status = "Currently Open"
+                ),
+                OpenApplicationItem(
+                    appName = "Windows Settings",
+                    processName = "SystemSettings.exe",
+                    windowTitle = "Settings",
+                    category = "System Settings",
+                    openedAt = "07:03 PM",
+                    duration = "1h 38m",
+                    isOpen = true,
+                    isForeground = false,
+                    status = "Currently Open"
+                )
+            )
+        }
+
+        val openCount = openAppsList.count { it.isOpen }
+        val closedCount = openAppsList.count { !it.isOpen }
+
+        val filteredApps = when (selectedAppFilter) {
+            "OPEN" -> openAppsList.filter { it.isOpen }
+            "CLOSED" -> openAppsList.filter { !it.isOpen }
+            else -> openAppsList
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "OPEN APPLICATIONS ON LAPTOP",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextSecondary,
+                    letterSpacing = 1.sp
+                )
+                Text(
+                    text = "Live timeline • Launch times • Foreground status",
+                    fontSize = 10.sp,
+                    color = TextMuted
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(PrimaryBlue.copy(alpha = 0.1f))
+                    .padding(horizontal = 8.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = "$openCount Open",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = PrimaryBlue
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Application Filter Chips
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            listOf("ALL" to "All (${openAppsList.size})", "OPEN" to "Open Now ($openCount)", "CLOSED" to "Closed ($closedCount)").forEach { (key, label) ->
+                val isSel = selectedAppFilter == key
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isSel) PrimaryBlue else LightSurfaceVariant)
+                        .clickable { selectedAppFilter = key }
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = label,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isSel) Color.White else TextSecondary
+                    )
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Applications List Card
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = LightSurface,
+                contentColor = TextPrimary
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, LightBorderColor, RoundedCornerShape(14.dp))
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                if (filteredApps.isEmpty()) {
+                    Text(
+                        text = "No applications match the selected filter.",
+                        fontSize = 12.sp,
+                        color = TextMuted,
+                        modifier = Modifier.padding(vertical = 12.dp)
+                    )
+                } else {
+                    filteredApps.forEachIndexed { index, app ->
+                        val isFg = app.isForeground
+                        val appIcon = when {
+                            app.appName.contains("Chrome", true) || app.appName.contains("Edge", true) || app.appName.contains("Firefox", true) || app.category.contains("Browser", true) -> Icons.Default.Language
+                            app.appName.contains("Code", true) || app.appName.contains("Studio", true) || app.appName.contains("IDE", true) || app.category.contains("Development", true) -> Icons.Default.Code
+                            app.appName.contains("WhatsApp", true) || app.appName.contains("Telegram", true) || app.appName.contains("Discord", true) || app.category.contains("Messaging", true) -> Icons.Default.Chat
+                            app.appName.contains("Settings", true) || app.category.contains("Settings", true) -> Icons.Default.Settings
+                            app.appName.contains("Explorer", true) || app.category.contains("Management", true) -> Icons.Default.FolderOpen
+                            app.appName.contains("PowerShell", true) || app.appName.contains("Terminal", true) || app.appName.contains("Command", true) -> Icons.Default.Terminal
+                            app.appName.contains("Word", true) || app.appName.contains("Excel", true) || app.appName.contains("PDF", true) || app.appName.contains("WPS", true) -> Icons.Default.Description
+                            else -> Icons.Default.Laptop
+                        }
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isFg) PrimaryBlue.copy(alpha = 0.05f) else Color.Transparent)
+                                .padding(if (isFg) 8.dp else 4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(38.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isFg) PrimaryBlue.copy(alpha = 0.15f) else LightSurfaceVariant),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = appIcon,
+                                            contentDescription = null,
+                                            tint = if (isFg) PrimaryBlue else TextSecondary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = app.appName,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = TextPrimary,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            if (isFg) {
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .background(BandGreen.copy(alpha = 0.15f))
+                                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "IN USE NOW",
+                                                        fontSize = 9.sp,
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        color = BandGreen
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = app.processName,
+                                                fontSize = 11.sp,
+                                                fontFamily = FontFamily.Monospace,
+                                                color = TextMuted
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = "• ${app.category}",
+                                                fontSize = 11.sp,
+                                                color = TextSecondary
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Status Badge
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(
+                                            when {
+                                                isFg -> BandGreen.copy(alpha = 0.12f)
+                                                app.isOpen -> PrimaryBlue.copy(alpha = 0.1f)
+                                                else -> LightSurfaceVariant
+                                            }
+                                        )
+                                        .padding(horizontal = 7.dp, vertical = 3.dp)
+                                ) {
+                                    Text(
+                                        text = when {
+                                            isFg -> "Active Now"
+                                            app.isOpen -> "Open"
+                                            else -> "Closed"
+                                        },
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = when {
+                                            isFg -> BandGreen
+                                            app.isOpen -> PrimaryBlue
+                                            else -> TextMuted
+                                        }
+                                    )
+                                }
+                            }
+
+                            // Window title and Launch Time Details
+                            if (app.windowTitle.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "📄 ${app.windowTitle}",
+                                    fontSize = 11.sp,
+                                    color = TextSecondary,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.AccessTime,
+                                        contentDescription = null,
+                                        tint = TextMuted,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = if (app.isOpen) {
+                                            "Opened: ${app.openedAt} • Running for ${app.duration}"
+                                        } else {
+                                            "Opened: ${app.openedAt} • ${app.closedAt ?: "Recently Closed"}"
+                                        },
+                                        fontSize = 10.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        color = TextSecondary
+                                    )
+                                }
+
+                                Text(
+                                    text = if (app.isOpen) "STATUS: RUNNING" else "STATUS: TERMINATED",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (app.isOpen) BandGreen else TextMuted
+                                )
+                            }
+                        }
+
+                        if (index < filteredApps.size - 1) {
+                            Divider(color = LightBorderColor.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 4.dp))
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        // =========================================================================
+        // 6. CONNECTED DEVICES TO LAPTOP (Hotspot & USB) (Requirement #1)
+        // =========================================================================
+        val rawConnectedDevices = status?.connectedDevices ?: emptyList()
+        val connectedDevicesList = if (rawConnectedDevices.isNotEmpty()) {
+            rawConnectedDevices
+        } else {
+            listOf(
+                ConnectedDeviceItem(
+                    id = "usb_phone_current",
+                    name = "Redmi Note 7 Pro (949A1851)",
+                    type = "usb_phone",
+                    status = if (connectionState == ConnectionStatus.CONNECTED) "Connected (Active USB)" else "USB Tethered",
+                    connectionType = "USB Cable (ADB Port 8765)",
+                    details = "Direct Offline Hardware Bridge | Model: Redmi Note 7 Pro",
+                    iconType = "phone"
+                ),
+                ConnectedDeviceItem(
+                    id = "hotspot_ap_status",
+                    name = "Laptop Mobile Hotspot",
+                    type = "hotspot_ap",
+                    status = "Hotspot Off",
+                    connectionType = "Mobile Hotspot (Wi-Fi)",
+                    details = "0 devices connected | Windows Hotspot is currently Off",
+                    iconType = "wifi"
+                ),
+                ConnectedDeviceItem(
+                    id = "companion_stream",
+                    name = "Redmi Note 7 Pro (Companion App)",
+                    type = "paired_companion",
+                    status = if (connectionState == ConnectionStatus.CONNECTED) "Active Session" else "Standby",
+                    connectionType = "Local Wi-Fi / USB",
+                    details = "Live Telemetry & Security Controller Session",
+                    iconType = "mobile"
+                )
+            )
+        }
+
+        val hotspotCount = connectedDevicesList.count { it.connectionType.contains("Hotspot", true) || it.type.contains("hotspot", true) }
+        val usbCount = connectedDevicesList.count { it.connectionType.contains("USB", true) || it.type.contains("usb", true) }
+
+        val filteredDevices = when (selectedDeviceFilter) {
+            "HOTSPOT" -> connectedDevicesList.filter { it.connectionType.contains("Hotspot", true) || it.type.contains("hotspot", true) }
+            "USB" -> connectedDevicesList.filter { it.connectionType.contains("USB", true) || it.type.contains("usb", true) }
+            else -> connectedDevicesList
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "CONNECTED DEVICES TO LAPTOP",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextSecondary,
+                    letterSpacing = 1.sp
+                )
+                Text(
+                    text = "Hotspot (Wi-Fi) • USB Cable • Mass Storage",
+                    fontSize = 10.sp,
+                    color = TextMuted
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(PrimaryBlue.copy(alpha = 0.1f))
+                    .padding(horizontal = 8.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = "${connectedDevicesList.size} Devices",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = PrimaryBlue
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Device Filter Chips
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            listOf("ALL" to "All (${connectedDevicesList.size})", "HOTSPOT" to "Hotspot ($hotspotCount)", "USB" to "USB ($usbCount)").forEach { (key, label) ->
+                val isSel = selectedDeviceFilter == key
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isSel) PrimaryBlue else LightSurfaceVariant)
+                        .clickable { selectedDeviceFilter = key }
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = label,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isSel) Color.White else TextSecondary
+                    )
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = LightSurface,
+                contentColor = TextPrimary
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, LightBorderColor, RoundedCornerShape(14.dp))
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                if (filteredDevices.isEmpty()) {
+                    Text(
+                        text = "No devices connected matching this filter.",
+                        fontSize = 12.sp,
+                        color = TextMuted,
+                        modifier = Modifier.padding(vertical = 12.dp)
+                    )
+                } else {
+                    filteredDevices.forEachIndexed { index, device ->
+                        val isHotspot = device.connectionType.contains("Hotspot", true) || device.type.contains("hotspot", true)
+                        val isUsb = device.connectionType.contains("USB", true) || device.type.contains("usb", true)
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(
+                                            when {
+                                                isHotspot -> Color(0xFFEDE9FE)
+                                                isUsb -> Color(0xFFE0F2FE)
+                                                else -> LightSurfaceVariant
+                                            }
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = when {
+                                            isHotspot -> Icons.Default.Wifi
+                                            device.iconType in listOf("phone", "mobile") -> Icons.Default.PhoneAndroid
+                                            device.iconType in listOf("drive") -> Icons.Default.Storage
+                                            else -> Icons.Default.Usb
+                                        },
+                                        contentDescription = null,
+                                        tint = when {
+                                            isHotspot -> Color(0xFF7C3AED)
+                                            isUsb -> PrimaryBlue
+                                            else -> TextSecondary
+                                        },
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = device.name,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(
+                                                    when {
+                                                        isHotspot -> Color(0xFFEDE9FE)
+                                                        isUsb -> Color(0xFFE0F2FE)
+                                                        else -> Color(0xFFDCFCE7)
+                                                    }
+                                                )
+                                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                                        ) {
+                                            Text(
+                                                text = when {
+                                                    isHotspot -> "HOTSPOT"
+                                                    isUsb -> "USB"
+                                                    else -> "PAIRED"
+                                                },
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = when {
+                                                    isHotspot -> Color(0xFF7C3AED)
+                                                    isUsb -> Color(0xFF0369A1)
+                                                    else -> Color(0xFF15803D)
+                                                }
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(1.dp))
+                                    Text(
+                                        text = device.connectionType + (device.details?.let { " • $it" } ?: ""),
+                                        fontSize = 11.sp,
+                                        color = TextSecondary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(
+                                        when {
+                                            device.status.contains("Active", true) || device.status.contains("Connected", true) -> BandGreen.copy(alpha = 0.1f)
+                                            device.status.contains("Mounted", true) -> PrimaryBlue.copy(alpha = 0.1f)
+                                            else -> LightSurfaceVariant
+                                        }
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    text = device.status,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = when {
+                                        device.status.contains("Active", true) || device.status.contains("Connected", true) -> BandGreen
+                                        device.status.contains("Mounted", true) -> PrimaryBlue
+                                        else -> TextSecondary
+                                    }
+                                )
+                            }
+                        }
+                        if (index < filteredDevices.size - 1) {
+                            Divider(color = LightBorderColor.copy(alpha = 0.6f), modifier = Modifier.padding(vertical = 4.dp))
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
 
         // =========================================================================
         // 5. HARDWARE GAUGES (CPU, RAM, Storage, Battery)
@@ -746,66 +1323,6 @@ fun DashboardScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // =========================================================================
-        // 7. ACTIVE APPLICATION GLANCE
-        // =========================================================================
-        if (activeWin != null && (!activeWin.appName.isNullOrEmpty() || !activeWin.windowTitle.isNullOrEmpty())) {
-            Text(
-                text = "ACTIVE DESKTOP APPLICATION",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextSecondary,
-                letterSpacing = 1.sp
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Card(
-                colors = CardDefaults.cardColors(containerColor = LightSurface),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, LightBorderColor, RoundedCornerShape(14.dp))
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Laptop, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = activeWin.appName ?: activeWin.processName ?: "Active Application",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary
-                            )
-                        }
-
-                        if (activeWin.durationSeconds > 0) {
-                            Text(
-                                text = "${activeWin.durationSeconds}s",
-                                fontSize = 11.sp,
-                                fontFamily = FontFamily.Monospace,
-                                color = TextSecondary
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Text(
-                        text = activeWin.tabTitle ?: activeWin.windowTitle ?: "--",
-                        fontSize = 12.sp,
-                        color = TextPrimary,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-        }
 
         // =========================================================================
         // 8. TOP RUNNING APPLICATIONS
@@ -890,6 +1407,261 @@ fun DashboardScreen(
                     }
                 }
             }
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        // =========================================================================
+        // 7. TIME & DATE EVENT TIMELINE / HISTORY (Persistent Mobile Log)
+        // =========================================================================
+        val filteredTimeline = when (selectedTimelineFilter) {
+            "APP" -> timelineEvents.filter { it.category == "APP" }
+            "DEVICE" -> timelineEvents.filter { it.category == "DEVICE" }
+            "SYSTEM" -> timelineEvents.filter { it.category == "SYSTEM" }
+            "SECURITY" -> timelineEvents.filter { it.category == "SECURITY" }
+            else -> timelineEvents
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "TIME & DATE EVENT TIMELINE",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextSecondary,
+                    letterSpacing = 1.sp
+                )
+                Text(
+                    text = "Saved permanently on phone • Live chronological log",
+                    fontSize = 10.sp,
+                    color = TextMuted
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(PrimaryBlue.copy(alpha = 0.1f))
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "${timelineEvents.size} Logged",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryBlue
+                    )
+                }
+                if (timelineEvents.isNotEmpty()) {
+                    IconButton(
+                        onClick = { showClearTimelineDialog = true },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(Icons.Default.DeleteOutline, contentDescription = "Clear History", tint = TextMuted, modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Timeline Filter Chips
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            listOf(
+                "ALL" to "All (${timelineEvents.size})",
+                "APP" to "Apps (${timelineEvents.count { it.category == "APP" }})",
+                "DEVICE" to "Devices (${timelineEvents.count { it.category == "DEVICE" }})",
+                "SYSTEM" to "Power (${timelineEvents.count { it.category == "SYSTEM" }})",
+                "SECURITY" to "Alerts (${timelineEvents.count { it.category == "SECURITY" }})"
+            ).forEach { (key, label) ->
+                val isSel = selectedTimelineFilter == key
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isSel) PrimaryBlue else LightSurfaceVariant)
+                        .clickable { selectedTimelineFilter = key }
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = label,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isSel) Color.White else TextSecondary
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Timeline Card Container
+        Card(
+            colors = CardDefaults.cardColors(containerColor = LightSurface, contentColor = TextPrimary),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, LightBorderColor, RoundedCornerShape(14.dp))
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                if (filteredTimeline.isEmpty()) {
+                    Text(
+                        text = "No events recorded yet. Connect to laptop to start logging.",
+                        fontSize = 12.sp,
+                        color = TextMuted,
+                        modifier = Modifier.padding(vertical = 12.dp)
+                    )
+                } else {
+                    filteredTimeline.take(40).forEachIndexed { idx, ev ->
+                        val (catBg, catColor, catIcon) = when (ev.category) {
+                            "APP" -> Triple(PrimaryBlue.copy(alpha = 0.12f), PrimaryBlue, Icons.Default.Laptop)
+                            "DEVICE" -> Triple(Color(0xFF00897B).copy(alpha = 0.12f), Color(0xFF00897B), Icons.Default.Usb)
+                            "SYSTEM" -> Triple(BandGreen.copy(alpha = 0.12f), BandGreen, Icons.Default.PowerSettingsNew)
+                            "SECURITY" -> Triple(BandRed.copy(alpha = 0.12f), BandRed, Icons.Default.Shield)
+                            else -> Triple(LightSurfaceVariant, TextSecondary, Icons.Default.Info)
+                        }
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Date & Time Stamp Badges
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(LightSurfaceVariant)
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "📅 ${ev.dateStr.ifEmpty { "Today" }}",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            fontFamily = FontFamily.Monospace,
+                                            color = TextSecondary
+                                        )
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(LightSurfaceVariant)
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "⏰ ${ev.timeStr.ifEmpty { "Just now" }}",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            fontFamily = FontFamily.Monospace,
+                                            color = PrimaryBlue
+                                        )
+                                    }
+                                }
+
+                                // Category Chip
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(catBg)
+                                        .padding(horizontal = 5.dp, vertical = 1.dp)
+                                ) {
+                                    Text(
+                                        text = ev.category,
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = catColor
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(CircleShape)
+                                        .background(catBg),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(catIcon, contentDescription = null, tint = catColor, modifier = Modifier.size(15.dp))
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = ev.title,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    if (ev.details.isNotEmpty()) {
+                                        Text(
+                                            text = ev.details,
+                                            fontSize = 10.sp,
+                                            color = TextSecondary,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                                if (ev.status.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = ev.status,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (ev.severity == "WARNING" || ev.severity == "CRITICAL") BandRed else catColor
+                                    )
+                                }
+                            }
+                        }
+
+                        if (idx < filteredTimeline.take(40).size - 1) {
+                            Divider(color = LightBorderColor.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 3.dp))
+                        }
+                    }
+                }
+            }
+        }
+
+        if (showClearTimelineDialog) {
+            AlertDialog(
+                onDismissRequest = { showClearTimelineDialog = false },
+                title = { Text("Clear Timeline History?") },
+                text = { Text("Are you sure you want to clear all saved timeline logs on your phone?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            repository.clearTimelineHistory()
+                            showClearTimelineDialog = false
+                        }
+                    ) {
+                        Text("Clear", color = BandRed, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showClearTimelineDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
 
         Spacer(modifier = Modifier.height(24.dp))

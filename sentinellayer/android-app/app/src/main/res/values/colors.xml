@@ -1,13 +1,15 @@
 <resources>
-    <color name="primary">#00E676</color>
-    <color name="primary_dark">#00B0FF</color>
-    <color name="background_dark">#0D1117</color>
-    <color name="surface_dark">#161B22</color>
-    <color name="surface_variant_dark">#21262D</color>
-    <color name="text_primary">#F0F6FC</color>
-    <color name="text_secondary">#8B949E</color>
-    <color name="band_green">#00E676</color>
-    <color name="band_yellow">#FFD600</color>
-    <color name="band_orange">#FF9100</color>
-    <color name="band_red">#FF1744</color>
+    <color name="primary">#2563EB</color>
+    <color name="primary_dark">#1D4ED8</color>
+    <color name="background_light">#F8FAFC</color>
+    <color name="surface_light">#FFFFFF</color>
+    <color name="surface_variant_light">#F1F5F9</color>
+    <!-- Solid, pitch Slate 900 for dark, sharp, non-bleached text on white backgrounds -->
+    <color name="text_primary">#0F172A</color>
+    <color name="text_secondary">#334155</color>
+    <color name="text_muted">#64748B</color>
+    <color name="band_green">#16A34A</color>
+    <color name="band_yellow">#CA8A04</color>
+    <color name="band_orange">#EA580C</color>
+    <color name="band_red">#DC2626</color>
 </resources>

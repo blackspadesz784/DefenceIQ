@@ -1,0 +1,58 @@
+======================================================================
+               DEFENCEIQ - USER SETUP & SHARING GUIDE (HINDI)
+======================================================================
+
+Aapke teeno naye niyam (rules) ko system me implement kar diya gaya hai:
+1. "Ek baar laptop connect ho jaaye toh hum kahi bhi hon, phone se connected rahe."
+2. "Pairing token tab generate ho jab hum naye laptop ko phone se connect karne ka try kar rahe hon."
+3. "Ek baar connect ho gaya toh tab tak connected rahe jab tak hum khud usse disconnect na karein."
+
+----------------------------------------------------------------------
+1. PERMANENT STICKY PAIRING (जब तक आप खुद Unpair न करें)
+----------------------------------------------------------------------
+- Phone me app open karte hi ab DIRECT DASHBOARD khulega!
+- Chahe:
+  * Phone restart ho jaye
+  * App close karke dobara open karein
+  * Laptop band ho jaye ya network badle
+- App aapko kabhi bhi Pairing screen par wapas nahi bhejegi!
+- Dashboard par hi status dikhega:
+  * 🟢 Connected (Active Now)
+  * 🟡 Reconnecting... (Agar network change ho raha ho)
+  * 🔴 Laptop Offline (Last seen time ke sath)
+- Pairing screen tabhi aayegi jab aap Dashboard par diye gaye
+  "Revoke / Unpair" button par khud tap karenge ya naya laptop jodna chahenge.
+
+----------------------------------------------------------------------
+2. KAHI BHI HON, CONNECTION LIVE RAHEGA (GLOBAL CLOUD RELAY)
+----------------------------------------------------------------------
+- Ab connection sirf Wi-Fi tak seemit nahi hai:
+  * Agar aap ghar/office se bahar chale jayein aur phone me Mobile Data (4G/5G) chalu ho,
+  * Ya laptop ghar par ho aur aap kisi aur shehar me hon,
+- DefenceIQ ka End-to-End Encrypted Cloud Relay background me apne aap
+  laptop aur phone ko jod kar rakhega!
+- Aap kahi se bhi:
+  * Laptop ke open apps live dekh sakte hain
+  * Kaun se USB ya devices jude hain dekh sakte hain
+  * Time & Date wise alerts aur timeline dekh sakte hain
+
+----------------------------------------------------------------------
+3. NAYE LAPTOP KE LIYE ON-THE-SPOT TOKEN GENERATION
+----------------------------------------------------------------------
+- Jab bhi kisi NAYE LAPTOP ko phone se connect karna ho:
+  1. Us naye laptop par `Show-Pairing-Token.bat` run karein.
+  2. Wahan screen par 'N' press karein -> On the spot ek naya unique
+     token (jaise DIQ-XXXX-XXXX) generate ho jayega!
+  3. Phone ke Pairing screen me jakar yeh naya token daalein ya
+     "Nearby Laptops on Wi-Fi" me 1-tap karke connect karein!
+  4. Ek baar connect hone ke baad yeh naya laptop bhi hamesha ke liye
+     phone se jud jayega!
+
+----------------------------------------------------------------------
+FILES KI DETAILS:
+----------------------------------------------------------------------
+1. Android APK: `DefenceIQ-Share\📱_Mobile_App_Android\DefenceIQ-Mobile-Companion.apk`
+2. Laptop Run: `Start-DefenceIQ-Laptop.bat`
+3. Token Manager / Generator: `Show-Pairing-Token.bat`
+4. Silent Auto Startup: `Install-Startup.bat`
+======================================================================

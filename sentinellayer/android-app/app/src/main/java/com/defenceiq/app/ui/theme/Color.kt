@@ -6,11 +6,12 @@ import androidx.compose.ui.graphics.Color
 val LightBackground = Color(0xFFF8FAFC)       // Crisp modern off-white
 val LightSurface = Color(0xFFFFFFFF)          // Pure white card surfaces
 val LightSurfaceVariant = Color(0xFFF1F5F9)   // Subtle light gray accents
-val LightBorderColor = Color(0xFFE2E8F0)      // Soft clean borders
+val LightBorderColor = Color(0xFFCBD5E1)      // Crisp slate-300 borders
 
-val TextPrimary = Color(0xFF0F172A)           // High-contrast slate 900 text
-val TextSecondary = Color(0xFF475569)         // Slate 600 secondary text
-val TextMuted = Color(0xFF94A3B8)             // Slate 400 helper/caption text
+// Pitch Slate colors guaranteed never to blend or bleach
+val TextPrimary = Color(0xFF0F172A)           // Ultra-sharp pitch Slate 900
+val TextSecondary = Color(0xFF334155)         // Sharp Slate 700 secondary text
+val TextMuted = Color(0xFF64748B)             // High-contrast Slate 500 helper/caption text
 
 // Professional Primary & Accent Colors
 val PrimaryBlue = Color(0xFF2563EB)           // Enterprise Royal Blue

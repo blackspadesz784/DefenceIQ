@@ -1,0 +1,61 @@
+======================================================================
+               DEFENCEIQ - USER SETUP & SHARING GUIDE (HINDI)
+======================================================================
+
+Aapke do sawaal the:
+1. "Pairing token baar-baar change na ho, ek hi file run karein aur token on the spot mile."
+2. "Laptop jab bhi on ho, phone me apne aap updates aane lagein aur time & date wise saari cheezein phone ke dashboard me save rahein."
+
+Dono cheezein complete kar di gayi hain! 🚀
+
+----------------------------------------------------------------------
+FEATURE 1: PERMANENT MASTER TOKEN (KABHI BHI EXPIRATION YA CHANGE NAHI)
+----------------------------------------------------------------------
+- Master Pairing Token hamesha ke liye fixed kar diya gaya hai:
+  🔑 TOKEN: DIQ-EJFW-GC3V
+- Yeh token kabhi expire nahi hoga, kabhi invalidate nahi hoga, aur laptop
+  reboot hone par bhi hamesha yahi rahega!
+- On the spot dekhne ke liye:
+  * Sirf `Show-Pairing-Token.bat` par double click karein!
+  * Ya `Start-DefenceIQ.bat` chalu karein, screen par sabse upar dikhega.
+
+----------------------------------------------------------------------
+FEATURE 2: LAPTOP ON HOTE HI AUTO-UPDATE (ZERO TERMINAL)
+----------------------------------------------------------------------
+- Laptop me folder `💻_Laptop_App_Windows` me jayein:
+  -> `Install-Startup.bat` par 1 baar click karke run karein!
+- Iske baad jab bhi aapka laptop switch ON hoga:
+  1. DefenceIQ chupchap background me auto-start ho jayega.
+  2. UDP Discovery Beacon network par broadcast hone lagega.
+  3. Phone me DefenceIQ app background loop se laptop ko turant detect
+     karke automatically CONNECT kar lega — bina koi button dabaye!
+
+----------------------------------------------------------------------
+FEATURE 3: PHONE DASHBOARD ME TIME & DATE WISE PERMANENT HISTORY
+----------------------------------------------------------------------
+Phone app ke Dashboard par naya section add ho gaya hai:
+📊 "TIME & DATE EVENT TIMELINE"
+
+Isme date aur time ke sath har cheez phone ke storage me hamesha ke liye save hoti hai:
+1. 📅 Date & ⏰ Exact Time (e.g. 30 Sep 2026 • 10:50:07 AM)
+2. 💻 Laptop Power & Session Logs:
+   - "Laptop Powered On & Connected" (Kab laptop on hua aur connect hua)
+   - "Laptop Offline / Powered Off" (Kab laptop band hua ya signal gaya)
+3. 📱 Open Applications Activity:
+   - "Antigravity IDE Active Now" (Kaun sa app foreground me kab chala)
+   - "Google Chrome Opened" (App kitne baje launch hua)
+   - "WhatsApp Closed" (App kab close hua)
+4. 🔌 Connected Devices History:
+   - Hotspot, USB Cable, ADB connection kab judey aur kab hatey.
+5. 🛡️ Security Alerts & Protection Level changes.
+
+NOTE: Laptop agar band bhi ho, tab bhi phone me yeh poora historical
+timeline hamesha viewable rahega! User chahe toh 'Clear History' bhi kar sakta hai.
+
+----------------------------------------------------------------------
+SHARING PACKAGE:
+----------------------------------------------------------------------
+Folder `DefenceIQ-Share/` ke andar:
+- `📱_Mobile_App_Android/DefenceIQ-Mobile-Companion.apk` (Phone me install karein)
+- `💻_Laptop_App_Windows/` (Laptop me chalane ke liye 1-click files)
+======================================================================

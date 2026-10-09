@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.defenceiq.app.data.DiscoveredLaptop
 import com.defenceiq.app.network.ConnectionStatus
 import com.defenceiq.app.network.DefenceIqRepository
 import com.defenceiq.app.ui.theme.*
@@ -44,12 +45,13 @@ fun PairingScreen(
     val connectionState by repository.connectionState.collectAsState()
     val pairedDevice by repository.pairedDevice.collectAsState()
     val lastError by repository.lastError.collectAsState()
+    val discoveredLaptops by repository.discoveredLaptops.collectAsState()
 
     // 0 = Laptop -> Phone (Enter Laptop Token), 1 = Phone -> Laptop (Generate Mobile Token)
     var selectedFlowTab by remember { mutableStateOf(0) }
 
-    // Laptop -> Phone flow
-    var inputToken by remember { mutableStateOf("") }
+    // Laptop -> Phone flow (Preloaded with permanent master token)
+    var inputToken by remember { mutableStateOf(repository.token.ifEmpty { "DIQ-EJFW-GC3V" }) }
     var isVerifying by remember { mutableStateOf(false) }
     var showConfirmDialog by remember { mutableStateOf(false) }
     var userFriendlyError by remember { mutableStateOf<String?>(null) }
@@ -117,14 +119,14 @@ fun PairingScreen(
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "Device Pairing",
+            text = "Pair New Laptop",
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             color = TextPrimary
         )
 
         Text(
-            text = "Cryptographically secure, token-based pairing",
+            text = "Once paired, your laptop stays connected wherever you are",
             fontSize = 13.sp,
             color = TextSecondary
         )
@@ -189,22 +191,36 @@ fun PairingScreen(
             Tab(
                 selected = selectedFlowTab == 0,
                 onClick = { selectedFlowTab = 0; userFriendlyError = null },
+                selectedContentColor = PrimaryBlue,
+                unselectedContentColor = TextSecondary,
                 text = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Laptop, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Laptop, contentDescription = null, modifier = Modifier.size(16.dp), tint = if (selectedFlowTab == 0) PrimaryBlue else TextSecondary)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Laptop → Phone", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                        Text(
+                            text = "Laptop → Phone",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 12.sp,
+                            color = if (selectedFlowTab == 0) PrimaryBlue else TextSecondary
+                        )
                     }
                 }
             )
             Tab(
                 selected = selectedFlowTab == 1,
                 onClick = { selectedFlowTab = 1; userFriendlyError = null },
+                selectedContentColor = PrimaryBlue,
+                unselectedContentColor = TextSecondary,
                 text = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Smartphone, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Smartphone, contentDescription = null, modifier = Modifier.size(16.dp), tint = if (selectedFlowTab == 1) PrimaryBlue else TextSecondary)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Phone → Laptop", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                        Text(
+                            text = "Phone → Laptop",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 12.sp,
+                            color = if (selectedFlowTab == 1) PrimaryBlue else TextSecondary
+                        )
                     }
                 }
             )
@@ -243,6 +259,108 @@ fun PairingScreen(
                         color = TextSecondary,
                         lineHeight = 17.sp
                     )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(PrimaryBlue.copy(alpha = 0.08f))
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.VerifiedUser, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Permanent Master Token: DIQ-EJFW-GC3V",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryBlue
+                        )
+                    }
+
+                    if (discoveredLaptops.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "NEARBY LAPTOPS ON WI-FI (${discoveredLaptops.size})",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = PrimaryBlue,
+                                letterSpacing = 0.5.sp
+                            )
+                            Text(
+                                text = "Tap Connect to switch",
+                                fontSize = 10.sp,
+                                color = TextSecondary
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        discoveredLaptops.forEach { laptop ->
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = LightSurfaceVariant),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(PrimaryBlue.copy(alpha = 0.15f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(Icons.Default.Laptop, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(20.dp))
+                                        }
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Column {
+                                            Text(
+                                                text = laptop.hostname,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = TextPrimary
+                                            )
+                                            Text(
+                                                text = "${laptop.ip}:${laptop.port}",
+                                                fontSize = 11.sp,
+                                                color = TextSecondary,
+                                                fontFamily = FontFamily.Monospace
+                                            )
+                                        }
+                                    }
+                                    Button(
+                                        onClick = {
+                                            val tokToUse = laptop.token.ifBlank { inputToken.ifBlank { repository.token } }
+                                            isVerifying = true
+                                            repository.connectDirectLan(laptop.ip, laptop.port, tokToUse) {
+                                                isVerifying = false
+                                                onPairedSuccess()
+                                            }
+                                        },
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
+                                    ) {
+                                        Text("Connect", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(14.dp))
 

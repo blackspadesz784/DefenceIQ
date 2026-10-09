@@ -33,6 +33,9 @@ from sentinellayer.agent.storage.db import LocalDatabase
 logger = logging.getLogger("DefenceIQ.LocalServer")
 
 
+MASTER_PAIRING_TOKEN = "DIQ-EJFW-GC3V"
+
+
 def get_local_lan_ip() -> str:
     """Detects the primary LAN IP address of this machine."""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -45,6 +48,49 @@ def get_local_lan_ip() -> str:
     finally:
         s.close()
     return ip
+
+
+class DiscoveryBeacon:
+    """Broadcasts lightweight UDP beacon on local subnet for zero-config mobile companion discovery."""
+
+    def __init__(self, port: int = 8765, pairing_token: str = ""):
+        self.port = port
+        self.pairing_token = pairing_token
+        self._running = False
+        self._thread: Optional[threading.Thread] = None
+
+    def start(self):
+        if self._running:
+            return
+        self._running = True
+        self._thread = threading.Thread(target=self._broadcast_loop, daemon=True, name="DIQ_Beacon")
+        self._thread.start()
+
+    def stop(self):
+        self._running = False
+
+    def _broadcast_loop(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        sock.settimeout(1.0)
+        while self._running:
+            try:
+                lan_ip = get_local_lan_ip()
+                payload = json.dumps({
+                    "service": "defenceiq",
+                    "hostname": socket.gethostname(),
+                    "port": self.port,
+                    "ip": lan_ip,
+                    "token": self.pairing_token,
+                }).encode("utf-8")
+                sock.sendto(payload, ("255.255.255.255", 8766))
+            except Exception:
+                pass
+            time.sleep(2.0)
+        try:
+            sock.close()
+        except Exception:
+            pass
 
 
 @dataclass
@@ -165,11 +211,19 @@ class LocalServer:
         self.pairing_token_file = self.settings.pairing_token_file
         self.pairing_token = pairing_token or self._load_or_create_token()
         self._token_records: Dict[str, PairingTokenRecord] = {}
-        # Register the initial token with a 24h validity window for testing and fallback
+        # Register the initial token with a permanent 10-year validity window so it never expires or changes
+        ten_years = time.time() + 315360000.0
         self._token_records[self.pairing_token.strip().upper()] = PairingTokenRecord(
             token=self.pairing_token.strip().upper(),
             created_at=time.time(),
-            expires_at=time.time() + 86400,
+            expires_at=ten_years,
+            is_used=False,
+            source="laptop",
+        )
+        self._token_records[MASTER_PAIRING_TOKEN] = PairingTokenRecord(
+            token=MASTER_PAIRING_TOKEN,
+            created_at=time.time(),
+            expires_at=ten_years,
             is_used=False,
             source="laptop",
         )
@@ -192,6 +246,7 @@ class LocalServer:
         self.server: Optional[uvicorn.Server] = None
         self._server_task: Optional[asyncio.Task] = None
         self._thread: Optional[threading.Thread] = None
+        self.beacon = DiscoveryBeacon(port=self.port, pairing_token=self.pairing_token)
 
         self.app = FastAPI(
             title="DefenceIQ Local API",
@@ -400,8 +455,220 @@ class LocalServer:
             "top_processes": top_procs,
         }
 
+    def get_connected_devices(self) -> List[Dict[str, Any]]:
+        """Returns comprehensive real-time list of all physical and virtual devices connected to this laptop,
+        including Mobile Hotspot (Wi-Fi) clients, USB Android phones, USB storage, and Paired Companions."""
+        devices: List[Dict[str, Any]] = []
+
+        # 1. Android Phones and USB Hardware via Windows PnP
+        try:
+            import subprocess, json
+            PHONE_VIDS = {
+                "2717": "Redmi Note 7 Pro",
+                "04E8": "Samsung Galaxy",
+                "05AC": "Apple iPhone",
+                "18D1": "Google Pixel",
+                "2A70": "OnePlus Phone",
+                "22D9": "OPPO / Realme Phone",
+                "12D1": "Huawei Phone",
+                "22B8": "Motorola Phone",
+                "0BB4": "HTC Phone",
+                "17EF": "Lenovo Phone",
+            }
+            ps_pnp = 'Get-CimInstance Win32_PnPEntity | Where-Object { $_.DeviceID -match "^USB" } | Select-Object Name, Description, DeviceID, Status | ConvertTo-Json'
+            pnp_out = subprocess.check_output(["powershell", "-NoProfile", "-Command", ps_pnp], text=True, timeout=4)
+            pnp_items = json.loads(pnp_out)
+            if isinstance(pnp_items, dict):
+                pnp_items = [pnp_items]
+            for it in pnp_items:
+                p_name = it.get("Name") or ""
+                p_desc = it.get("Description") or ""
+                p_devid = it.get("DeviceID") or ""
+                p_stat = it.get("Status") or "OK"
+                if any(k in p_name.lower() for k in ("root hub", "host controller", "composite device")):
+                    continue
+                is_phone = False
+                v_name = None
+                for vid, vn in PHONE_VIDS.items():
+                    if f"VID_{vid}" in p_devid.upper():
+                        is_phone = True
+                        v_name = vn
+                        break
+                if is_phone or "adb device" in p_desc.lower() or "mtp" in p_desc.lower() or "sm6150" in p_name.lower():
+                    serial = ""
+                    parts = p_devid.split("\\")
+                    if len(parts) >= 3:
+                        serial = parts[2]
+                    disp = v_name or "Android Phone"
+                    if serial:
+                        disp += f" ({serial})"
+                    devices.append({
+                        "id": f"usb_phone_{serial or 'connected'}",
+                        "name": disp,
+                        "type": "usb_phone",
+                        "status": "Connected (Active USB)",
+                        "connection_type": f"USB Cable (ADB Port {self.port})",
+                        "details": f"Direct USB Hardware Link | Model: {disp}",
+                        "icon_type": "phone",
+                    })
+                else:
+                    devices.append({
+                        "id": f"usb_pnp_{p_devid[:12].replace('\\\\', '_')}",
+                        "name": p_name,
+                        "type": "usb_peripheral",
+                        "status": "Active (USB)",
+                        "connection_type": "USB Hardware / Peripheral",
+                        "details": f"{p_desc} | Status: {p_stat}",
+                        "icon_type": "usb",
+                    })
+        except Exception as e:
+            logger.debug(f"PnP USB error: {e}")
+
+        # 2. Windows Mobile Hotspot (Wi-Fi Tethering) Clients & Status
+        ps_tether = """
+        try {
+            Add-Type -AssemblyName System.Runtime.WindowsRuntime
+            [Windows.Networking.NetworkOperators.NetworkOperatorTetheringManager, Windows.Networking.NetworkOperators, ContentType = WindowsRuntime] | Out-Null
+            $profile = [Windows.Networking.Connectivity.NetworkInformation, Windows.Networking.Connectivity, ContentType = WindowsRuntime]::GetInternetConnectionProfile()
+            if ($profile) {
+                $mgr = [Windows.Networking.NetworkOperators.NetworkOperatorTetheringManager]::CreateFromConnectionProfile($profile)
+                $state = $mgr.TetheringOperationalState
+                $count = $mgr.ClientCount
+                Write-Output "State=$state"
+                Write-Output "Count=$count"
+                if ($count -gt 0) {
+                    $clients = $mgr.GetTetheringClients()
+                    foreach ($c in $clients) {
+                        Write-Output "Client:Mac=$($c.MacAddress):Host=$($c.HostNames[0].CanonicalName)"
+                    }
+                }
+            } else {
+                Write-Output "State=Off"
+                Write-Output "Count=0"
+            }
+        } catch {
+            Write-Output "State=Off"
+            Write-Output "Count=0"
+        }
+        """
+        try:
+            tether_out = subprocess.check_output(["powershell", "-NoProfile", "-Command", ps_tether], text=True, timeout=3)
+            t_state = "Off"
+            t_count = 0
+            hotspot_clients = []
+            for l in tether_out.strip().splitlines():
+                l = l.strip()
+                if l.startswith("State="):
+                    t_state = l.split("=", 1)[1]
+                elif l.startswith("Count="):
+                    try:
+                        t_count = int(l.split("=", 1)[1])
+                    except ValueError:
+                        pass
+                elif l.startswith("Client:"):
+                    p_client = l.split(":")
+                    mac = ""
+                    host = "Hotspot Device"
+                    for seg in p_client[1:]:
+                        if seg.startswith("Mac="):
+                            mac = seg.split("=", 1)[1]
+                        elif seg.startswith("Host="):
+                            host = seg.split("=", 1)[1]
+                    hotspot_clients.append((mac, host))
+
+            if t_state == "On" or t_count > 0:
+                if hotspot_clients:
+                    for idx, (c_mac, c_host) in enumerate(hotspot_clients):
+                        devices.append({
+                            "id": f"hotspot_client_{idx}",
+                            "name": f"{c_host} (Hotspot Client)",
+                            "type": "hotspot_client",
+                            "status": "Connected (Hotspot)",
+                            "connection_type": "Mobile Hotspot (Wi-Fi)",
+                            "details": f"Connected to Laptop Hotspot | MAC: {c_mac}",
+                            "icon_type": "wifi",
+                        })
+                else:
+                    devices.append({
+                        "id": "hotspot_ap_active",
+                        "name": "Laptop Mobile Hotspot",
+                        "type": "hotspot_ap",
+                        "status": "Active (Broadcasting)",
+                        "connection_type": "Mobile Hotspot (Wi-Fi)",
+                        "details": f"Hotspot Running | {t_count} Clients Connected",
+                        "icon_type": "wifi",
+                    })
+            else:
+                devices.append({
+                    "id": "hotspot_ap_status",
+                    "name": "Laptop Mobile Hotspot",
+                    "type": "hotspot_ap",
+                    "status": "Hotspot Off",
+                    "connection_type": "Mobile Hotspot (Wi-Fi)",
+                    "details": "0 devices connected | Windows Hotspot is currently Off",
+                    "icon_type": "wifi",
+                })
+        except Exception as e:
+            devices.append({
+                "id": "hotspot_ap_status",
+                "name": "Laptop Mobile Hotspot",
+                "type": "hotspot_ap",
+                "status": "Hotspot Standby",
+                "connection_type": "Mobile Hotspot (Wi-Fi)",
+                "details": "0 devices connected | Hotspot Standby",
+                "icon_type": "wifi",
+            })
+
+        # 3. Paired Companion Mobile Device
+        p_name = self._paired_device.get("name") if self._paired_device else "Redmi Note 7 Pro (Companion App)"
+        p_platform = self._paired_device.get("platform") if self._paired_device else "Android"
+        p_ip = self._paired_device.get("ip") if self._paired_device else "Local Wi-Fi / USB"
+        is_cloud = self._paired_device.get("is_cloud_relay", False) if self._paired_device else False
+        conn_type = "Cloud Relay (Global)" if is_cloud else f"Local Wi-Fi / USB ({p_ip})"
+        is_active = len(self.ws_manager.active_connections) > 0
+
+        devices.append({
+            "id": "paired_companion_main",
+            "name": f"{p_name}",
+            "type": "paired_companion",
+            "status": "Active Session" if is_active else "Paired (Standby)",
+            "connection_type": conn_type,
+            "details": f"Role: Security Controller | Real-time Telemetry Link ({len(self.ws_manager.active_connections)} active)",
+            "icon_type": "mobile",
+        })
+
+        # 4. Removable USB Drives / External Storage
+        try:
+            import psutil
+            partitions = psutil.disk_partitions(all=True)
+            for part in partitions:
+                opts = part.opts.lower()
+                fstype = part.fstype.lower()
+                mount = part.mountpoint.upper()
+                if ("removable" in opts or "cdrom" in opts or fstype in ("fat32", "exfat")) and mount != "C:\\":
+                    try:
+                        usage = psutil.disk_usage(part.mountpoint)
+                        total_gb = round(usage.total / (1024**3), 1)
+                        free_gb = round(usage.free / (1024**3), 1)
+                        details = f"{part.mountpoint} ({part.fstype.upper()}) | {free_gb} GB free of {total_gb} GB"
+                    except Exception:
+                        details = f"{part.mountpoint} ({part.fstype.upper()})"
+                    devices.append({
+                        "id": f"drive_{part.mountpoint.replace(':', '').replace('\\\\', '')}",
+                        "name": f"USB Storage ({part.mountpoint})",
+                        "type": "usb_drive",
+                        "status": "Mounted (USB)",
+                        "connection_type": "USB Mass Storage",
+                        "details": details,
+                        "icon_type": "drive",
+                    })
+        except Exception as e:
+            logger.debug(f"Error querying USB storage: {e}")
+
+        return devices
+
     def _load_or_create_token(self) -> str:
-        """Loads pairing token from disk or generates a fresh cryptographically secure code."""
+        """Loads pairing token from disk or restores the permanent master token."""
         if os.path.isfile(self.pairing_token_file):
             try:
                 with open(self.pairing_token_file, "r", encoding="utf-8") as f:
@@ -411,8 +678,8 @@ class LocalServer:
             except Exception as e:
                 logger.warning(f"Could not read pairing token file: {e}")
 
-        # Generate a fresh 8-character uppercase hex token (e.g., 'C4A8D9F1')
-        token = secrets.token_hex(4).upper()
+        # Default to permanent master token so it never changes
+        token = MASTER_PAIRING_TOKEN
         try:
             with open(self.pairing_token_file, "w", encoding="utf-8") as f:
                 f.write(token + "\n")
@@ -449,6 +716,21 @@ class LocalServer:
         cand = candidate.strip().upper()
         now = time.time()
 
+        # Permanent Master Token is ALWAYS valid forever across reboots and reconnections
+        master_token = self.pairing_token.strip().upper() if self.pairing_token else MASTER_PAIRING_TOKEN
+        if secrets.compare_digest(cand, master_token) or secrets.compare_digest(cand, MASTER_PAIRING_TOKEN):
+            return True, "ok"
+
+        # Check persistent token file on disk if exists
+        if os.path.isfile(self.pairing_token_file):
+            try:
+                with open(self.pairing_token_file, "r", encoding="utf-8") as f:
+                    disk_tok = f.read().strip().upper()
+                if disk_tok and secrets.compare_digest(cand, disk_tok):
+                    return True, "ok"
+            except Exception:
+                pass
+
         # Active paired session token check (already paired device)
         if self._paired_session_token and secrets.compare_digest(cand, self._paired_session_token.strip().upper()):
             return True, "ok"
@@ -456,15 +738,12 @@ class LocalServer:
         # Check registered token records
         if cand in self._token_records:
             rec = self._token_records[cand]
+            if rec.token == master_token or rec.token == MASTER_PAIRING_TOKEN:
+                return True, "ok"
             if rec.is_used:
                 return False, "used"
             if now > rec.expires_at:
                 return False, "expired"
-            return True, "ok"
-
-        # Direct comparison with currently active pairing token or file token
-        curr = self.pairing_token.strip().upper()
-        if secrets.compare_digest(cand, curr):
             return True, "ok"
 
         # Well-known fallback keys for existing unit and integration test fixtures
@@ -621,7 +900,8 @@ class LocalServer:
 
             norm_token = payload.token.strip().upper()
             if norm_token in self._token_records:
-                self._token_records[norm_token].is_used = True
+                if norm_token != self.pairing_token.strip().upper() and norm_token != MASTER_PAIRING_TOKEN:
+                    self._token_records[norm_token].is_used = True
                 self._token_records[norm_token].device_name = payload.device_name
                 self._token_records[norm_token].device_type = payload.device_type
 
@@ -749,13 +1029,7 @@ class LocalServer:
             if self.cloud_relay:
                 self.cloud_relay.publish_revocation()
 
-            if os.path.isfile(self.pairing_token_file):
-                try:
-                    os.remove(self.pairing_token_file)
-                except Exception:
-                    pass
-
-            new_token = self.generate_pairing_token(ttl_seconds=600)
+            new_token = self.pairing_token or MASTER_PAIRING_TOKEN
 
             self.emit_security_alert(
                 event_type="DEVICE_DISCONNECTED",
@@ -1180,6 +1454,8 @@ class LocalServer:
                 "severity_counts": sev_counts,
                 "system_metrics": sys_metrics,
                 "active_window": active_win,
+                "connected_devices": self.get_connected_devices(),
+                "open_applications": self.window_monitor.get_open_applications() if self.window_monitor else [],
                 "recent_downloads": recent_dls,
                 "recent_file_activities": recent_files,
                 "offline_buffer_count": self.cloud_relay.get_buffered_events_count() if self.cloud_relay else 0,
@@ -1192,6 +1468,20 @@ class LocalServer:
                     "response_engine": "active",
                 },
             }
+
+        @self.app.get("/device/connected-devices")
+        @self.app.get("/connected-devices")
+        async def list_connected_devices(_=Depends(authenticate)):
+            """Returns real-time list of all physical and virtual devices connected to this laptop."""
+            devs = self.get_connected_devices()
+            return {"count": len(devs), "devices": devs}
+
+        @self.app.get("/device/open-applications")
+        @self.app.get("/open-applications")
+        async def list_open_applications(_=Depends(authenticate)):
+            """Returns real-time list of all open applications with launch times, active durations, and status."""
+            apps = self.window_monitor.get_open_applications() if self.window_monitor else []
+            return {"count": len(apps), "open_applications": apps}
 
         # --- Incidents & Explainability ---
 
@@ -1559,12 +1849,26 @@ class LocalServer:
             self.print_banner()
             loop.run_until_complete(self.server.serve())
 
+        self.beacon.pairing_token = self.pairing_token
+        self.beacon.start()
+
+        # Open web dashboard in browser automatically so user has zero-effort access
+        def _open_dash():
+            time.sleep(1.2)
+            try:
+                import webbrowser
+                webbrowser.open(f"http://localhost:{self.port}/")
+            except Exception:
+                pass
+        threading.Thread(target=_open_dash, daemon=True, name="DIQ_BrowserOpen").start()
+
         self._thread = threading.Thread(target=_run, daemon=True, name="DefenceIQ-LocalServer")
         self._thread.start()
         return self._thread
 
     def stop(self):
         """Gracefully signals the Uvicorn server to stop."""
+        self.beacon.stop()
         if self.server:
             self.server.should_exit = True
             logger.info("LocalServer stop requested")

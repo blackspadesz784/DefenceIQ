@@ -22,7 +22,33 @@ data class AgentStatusResponse(
     @SerializedName("last_seen") val lastSeen: String? = null,
     @SerializedName("last_connected") val lastConnected: String? = null,
     @SerializedName("device_type") val deviceType: String? = "Laptop",
-    @SerializedName("paired_device") val pairedDevice: Map<String, Any>? = null
+    @SerializedName("paired_device") val pairedDevice: Map<String, Any>? = null,
+    @SerializedName("connected_devices") val connectedDevices: List<ConnectedDeviceItem> = emptyList(),
+    @SerializedName("open_applications") val openApplications: List<OpenApplicationItem> = emptyList()
+)
+
+data class OpenApplicationItem(
+    @SerializedName("app_name") val appName: String = "",
+    @SerializedName("process_name") val processName: String = "",
+    @SerializedName("pid") val pid: Int = 0,
+    @SerializedName("window_title") val windowTitle: String = "",
+    @SerializedName("category") val category: String = "Application",
+    @SerializedName("opened_at") val openedAt: String = "",
+    @SerializedName("duration") val duration: String = "",
+    @SerializedName("is_open") val isOpen: Boolean = true,
+    @SerializedName("is_foreground") val isForeground: Boolean = false,
+    @SerializedName("status") val status: String = "Currently Open",
+    @SerializedName("closed_at") val closedAt: String? = null
+)
+
+data class ConnectedDeviceItem(
+    @SerializedName("id") val id: String = "",
+    @SerializedName("name") val name: String = "",
+    @SerializedName("type") val type: String = "device",
+    @SerializedName("status") val status: String = "Connected",
+    @SerializedName("connection_type") val connectionType: String = "USB",
+    @SerializedName("details") val details: String? = null,
+    @SerializedName("icon_type") val iconType: String? = "usb"
 )
 
 data class SystemMetrics(
@@ -316,3 +342,25 @@ data class MonitoringScope(
     @SerializedName("privacy_guarantee") val privacyGuarantee: String = "",
     @SerializedName("containment_policy") val containmentPolicy: String = ""
 )
+
+data class TimelineEventItem(
+    @SerializedName("id") val id: String = java.util.UUID.randomUUID().toString(),
+    @SerializedName("timestamp_ms") val timestampMs: Long = System.currentTimeMillis(),
+    @SerializedName("date_str") val dateStr: String = "",
+    @SerializedName("time_str") val timeStr: String = "",
+    @SerializedName("category") val category: String = "SYSTEM", // "APP", "DEVICE", "SYSTEM", "SECURITY"
+    @SerializedName("title") val title: String = "",
+    @SerializedName("details") val details: String = "",
+    @SerializedName("status") val status: String = "",
+    @SerializedName("severity") val severity: String = "INFO" // "INFO", "WARNING", "SUCCESS", "CRITICAL"
+)
+
+data class DiscoveredLaptop(
+    @SerializedName("hostname") val hostname: String = "Host Laptop",
+    @SerializedName("ip") val ip: String = "127.0.0.1",
+    @SerializedName("port") val port: Int = 8765,
+    @SerializedName("token") val token: String = "",
+    @SerializedName("last_seen_ms") val lastSeenMs: Long = System.currentTimeMillis()
+)
+
+

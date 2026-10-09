@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Permissions for Local Wi-Fi API and WebSocket stream -->
+    <!-- Permissions for Local Wi-Fi API, UDP auto-discovery, and WebSocket stream -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
 
     <application
         android:allowBackup="true"
@@ -11,13 +14,17 @@
         android:label="DefenceIQ"
         android:roundIcon="@android:drawable/ic_lock_lock"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.Material.NoActionBar"
+        android:theme="@style/Theme.DefenceIQ"
+        android:forceDarkAllowed="false"
+        tools:targetApi="q"
         android:usesCleartextTraffic="true">
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"
             android:label="DefenceIQ"
-            android:theme="@android:style/Theme.Material.NoActionBar">
+            android:theme="@style/Theme.DefenceIQ"
+            android:forceDarkAllowed="false"
+            tools:targetApi="q">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

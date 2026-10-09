@@ -123,7 +123,7 @@ async def main():
         return
 
     # 0. Active Window & Browser Tab Monitor
-    window_monitor = WindowMonitor(poll_interval=2.0)
+    window_monitor = WindowMonitor(poll_interval=1.0)
     window_monitor.start()
 
     # 1. Process Monitor
@@ -417,6 +417,7 @@ async def main():
                             "local_ip": default_settings.host,
                         },
                         "active_window": active_win,
+                        "connected_devices": server.get_connected_devices() if server else [],
                         "recent_downloads": recent_dls,
                         "recent_file_activities": recent_files,
                         "threat_count": len(recent_incidents),
@@ -433,6 +434,8 @@ async def main():
     usb_task = asyncio.create_task(usb_monitor.start())
     file_monitor.start()
     self_monitor.start()
+    window_monitor.start()
+    download_monitor.start()
     heartbeat_task = asyncio.create_task(heartbeat_loop())
 
     if server:

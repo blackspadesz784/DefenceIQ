@@ -88,14 +88,17 @@ fun AlertsScreen(
             Tab(
                 selected = selectedTab == 0,
                 onClick = { selectedTab = 0 },
+                selectedContentColor = PrimaryBlue,
+                unselectedContentColor = TextSecondary,
                 text = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Security, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Security, contentDescription = null, modifier = Modifier.size(16.dp), tint = if (selectedTab == 0) PrimaryBlue else TextSecondary)
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Security Alerts (${securityAlerts.size})",
                             fontWeight = FontWeight.SemiBold,
-                            fontSize = 12.sp
+                            fontSize = 12.sp,
+                            color = if (selectedTab == 0) PrimaryBlue else TextSecondary
                         )
                     }
                 }
@@ -103,14 +106,17 @@ fun AlertsScreen(
             Tab(
                 selected = selectedTab == 1,
                 onClick = { selectedTab = 1 },
+                selectedContentColor = PrimaryBlue,
+                unselectedContentColor = TextSecondary,
                 text = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Warning, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Warning, contentDescription = null, modifier = Modifier.size(16.dp), tint = if (selectedTab == 1) PrimaryBlue else TextSecondary)
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Threat Incidents (${incidents.size})",
                             fontWeight = FontWeight.SemiBold,
-                            fontSize = 12.sp
+                            fontSize = 12.sp,
+                            color = if (selectedTab == 1) PrimaryBlue else TextSecondary
                         )
                     }
                 }

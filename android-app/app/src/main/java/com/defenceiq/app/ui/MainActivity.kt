@@ -39,21 +39,27 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            window.decorView.isForceDarkAllowed = false
+        }
         com.defenceiq.app.ui.notifications.NotificationHelper.initNotificationChannel(applicationContext)
 
         setContent {
             DefenceIQTheme {
+                val isPaired by repository.isPaired.collectAsState()
                 val connectionState by repository.connectionState.collectAsState()
                 var currentScreen by remember {
                     mutableStateOf<Screen>(
-                        if (connectionState == ConnectionStatus.CONNECTED) Screen.Dashboard else Screen.Pairing
+                        if (isPaired || connectionState == ConnectionStatus.CONNECTED) Screen.Dashboard else Screen.Pairing
                     )
                 }
 
-                // If paired successfully, move to Dashboard
-                LaunchedEffect(connectionState) {
-                    if (connectionState == ConnectionStatus.CONNECTED && currentScreen == Screen.Pairing) {
+                // If paired or connected, stay on / navigate to Dashboard
+                LaunchedEffect(connectionState, isPaired) {
+                    if ((connectionState == ConnectionStatus.CONNECTED || isPaired) && currentScreen == Screen.Pairing) {
                         currentScreen = Screen.Dashboard
+                    } else if (!isPaired && currentScreen != Screen.Pairing) {
+                        currentScreen = Screen.Pairing
                     }
                 }
 
